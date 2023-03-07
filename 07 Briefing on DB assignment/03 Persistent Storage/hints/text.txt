@@ -1,0 +1,15 @@
+Your first task is to write a method that reads in the data from the <a href="resources/people.tab" target="_blank">sample data file</a>
+using the Java File IO API. View the slides and video at the start of this section for an overview of these packages.
+At this stage you need only print out the records to the screen (in a later section you will store this data in a suitable data structure).
+You may need to delve more deeply into the
+<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/package-summary.html" target="_blank">File IO documentation</a>
+in order to implement your ideas.
+
+When working with file paths, it is **essential** that you do not use any platform-specific file separators.
+Some platforms use `\` and some platforms use `/` for separating folder names in a file path.
+Your java code should work on ALL platforms - for this reason, you should make use of `File.separator` constant
+(which will contain the relevant character for the platform the code is running on).
+
+Note that if you encounter a tab file with invalid formatting when reading in data from the filesystem, your file parsing method should 
+throw an `IOException`. You should ensure that this exception is subsequently caught by another part of your server - remember:
+don't let your server crash !

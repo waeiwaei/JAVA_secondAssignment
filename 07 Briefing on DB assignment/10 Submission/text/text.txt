@@ -1,0 +1,30 @@
+You should create a zip archive of your entire Maven project and upload this via the "Assessment, submission and feedback"
+section on this unit's Blackboard page. It is essential that you ensure your code compiles and runs before you submit it.
+
+Your submission will be assessed on the success with which it implements the described query language,
+as well as the flexibility and robustness with which it operates.
+
+You should add a suitable range of tests to your project: your aim is to cover all required features
+of the server and verify the correct operation of your code. The completeness and comprehensivity of your test cases will be taken
+into account during the marking of this assignment. You submission will also be assessed on "code quality" as outlined in the lectures.
+
+You should make sure your code can respond to _at the very least_ the "standard" query spacing (as illustrated in the 
+<a href="resources/example-transcript.docx" target="_blank">example transcript</a>).
+As with any real implementation of SQL, you should also however try to support some level of variability and robustness.
+Remember that different users may attempt to use different spacing standards - it would be nice to support them, not constrain them.
+
+Make sure that your code does not contain anything specific to your computer (e.g. absolute file paths, operating system specific code etc).
+Before submitting your code, we advise your to test your project on a computer _other than the one it was developed on_ (e.g. a lab machine).
+Clear out all database files and then ensure the code compiles and runs correctly using Maven (using: `mvnw clean compile test`).
+We will apply a penalty mark if we cannot run your code "out of the box" - we can't spend time fixing everyones projects before we mark them !
+
+It is VERY important that you do NOT change the name or parameters of any of the classes and methods that you have been given.
+Scripts will be used to automatically run your code to make sure it operates correctly -
+if you change them, we won't be able to mark your code !
+It is **ESSENTIAL** that you check your code still passes the original skeleton test script - if this does not pass these basic tests
+then it is likely your code not not pass any of the other test scripts.
+
+You should include your entire project structure when you submit your code, with all the files and folder
+(including both your `main` source folder as well as the `test` folder containing your test scripts)
+Remember that your main class MUST be called `DBServer` and should not change the signature of the constructor or the `handleCommand` method
+(or we won't be able to run your code !)

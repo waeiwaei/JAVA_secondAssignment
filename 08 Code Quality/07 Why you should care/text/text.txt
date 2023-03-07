@@ -1,0 +1,6 @@
+You might be wondering why we are so keen to impress on you the importance of code quality.  
+View the slides and video to find out why !
+
+From this point onwards, you will be expected to apply the code quality principles presented in this workbook. This not only includes your current assignment, but also in your future development work (both on this degree and beyond !).
+
+For the remainder of assignments in this unit, you will be assess (at least in part) on the quality of your code - so be sure to apply these principles in your work.
