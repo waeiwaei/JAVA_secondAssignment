@@ -51,19 +51,21 @@ public class DBServer {
             tables.get(0).add(null);
         }
 
+        tables.get(0).set(0, token[3].replaceAll("[,.();]",""));
+        tables.get(0).set(1, token[4].replaceAll("[,.();]",""));
+        tables.get(0).set(2, token[5].replaceAll("[,.();]",""));
 
         //input to a new file - write to it
-        FileWriter f2 = new FileWriter(".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator+ token[2]);
+        FileWriter f2 = new FileWriter(".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator+ token[2]+".tab");
         BufferedWriter bw = new BufferedWriter(f2);
 
         bw.write("id");
         bw.write("\t");
-        bw.write(token[3].replaceAll("[,.();]",""));
+        bw.write(tables.get(0).get(0));
         bw.write("\t");
-        bw.write(token[4].replaceAll("[,.();]",""));
+        bw.write(tables.get(0).get(1));
         bw.write("\t");
-        bw.write(token[5].replaceAll("[,.();]",""));
-
+        bw.write(tables.get(0).get(2));
 
         bw.close();
 
