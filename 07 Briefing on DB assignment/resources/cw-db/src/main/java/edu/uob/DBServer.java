@@ -1,15 +1,13 @@
 package edu.uob;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Paths;
 import java.nio.file.Files;
+import java.util.ArrayList;
+
 
 /** This class implements the DB server. */
 public class DBServer {
@@ -17,9 +15,87 @@ public class DBServer {
     private static final char END_OF_TRANSMISSION = 4;
     private String storageFolderPath;
 
+
     public static void main(String args[]) throws IOException {
+
+        String fileSeparator = File.separator;
+
+        //example command to write to file
+        //Structure to store tables
+        ArrayList <ArrayList<String>> tables = new ArrayList<ArrayList<String>>();
+        String command = "CREATE TABLE marks (name, mark, pass);";
+
+        //store individual tokens in String object array
+        String[] token;
+        token = command.split("\s");
+
+        //identify the number of columns to create
+        int counter = 0;
+        for (int i = 0; i < command.length(); i++){
+            char c = command.charAt(i);
+            if(c == '('){
+                while(c != ')'){
+                    c=command.charAt(i);
+                    if(c == ','){
+                        counter++;
+                    }
+                    i++;
+                }
+                counter++;
+            }
+        }
+
+        //add columns - based on comma delimiter for columns
+        tables.add(new ArrayList<String>());
+        for(int i = 0; i < counter; i++) {
+            tables.get(0).add(null);
+        }
+
+
+        //input to a new file - write to it
+        FileWriter f2 = new FileWriter(".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator+ token[2]);
+        BufferedWriter bw = new BufferedWriter(f2);
+
+        bw.write("id");
+        bw.write("\t");
+        bw.write(token[3].replaceAll("[,.();]",""));
+        bw.write("\t");
+        bw.write(token[4].replaceAll("[,.();]",""));
+        bw.write("\t");
+        bw.write(token[5].replaceAll("[,.();]",""));
+
+
+        bw.close();
+
+
+        // Read from a file
+        File f = new File(".."+fileSeparator+"people.tab");
+        FileInputStream fiStream = new FileInputStream(f);
+        BufferedReader br = new BufferedReader(new InputStreamReader(fiStream));
+
+        String[] columnHeader;
+        //read the first row - column header
+        String s = br.readLine();
+        columnHeader = s.split("\t");
+
+        for(int i = 0; i < columnHeader.length;i++){
+            System.out.println(columnHeader[i]);
+        }
+
+        while(s != null){
+            s = br.readLine();
+            if(s.isEmpty()){
+                break;
+            }
+            String [] sr = s.split("\t");
+            System.out.println(sr[2]);
+        }
+
+
+
         DBServer server = new DBServer();
         server.blockingListenOn(8888);
+
     }
 
     /**
@@ -43,6 +119,7 @@ public class DBServer {
     */
     public String handleCommand(String command) {
         // TODO implement your server logic here
+
         return "";
     }
 
