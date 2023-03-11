@@ -21,9 +21,16 @@ public class DBServer {
     public static void main(String args[]) throws Exception {
 
         //tokenize commands from user
-        String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
-        //String command = "CREATE TABLE marks (name, mark, pass);";
+        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
+        //String command = "ALTER TABLE marks ADD percentage;";
+        //String command = "SELECT * FROM marks;";
+        //String command = "SELECT * FROM marks WHERE name != 'Dave';";
+        //String command = "CREATE TABLE marks (                        name, mark, pass);";
+        String command = "CREATE TABLE marks;";
         //String command = "CREATE DATABASE marks;";
+        //String command = "DROP TABLE coursework;";
+        //String command = "Drop        database marks;";
+        //String command = "JOIN coursework AND marks ON submission AND id;";
 
         tokenizer(command);
         System.out.println(tokens);
@@ -219,11 +226,17 @@ public class DBServer {
                 break;
 
             case "select":
-                //parseSelect();
+                current_token_index++;
+                if(parseSelect()){
+                    parse = true;
+                }
                 break;
 
             case "alter":
-                //parseAlter();
+                current_token_index++;
+                if(parseAlteration()){
+                    parse= true;
+                }
                 break;
 
             case "insert":
@@ -231,11 +244,17 @@ public class DBServer {
                 break;
 
             case "join":
-                //parseJoin();
+                current_token_index++;
+                if(parseJoin()){
+                    parse=true;
+                }
                 break;
 
             case "drop":
-                //parseDrop();
+                current_token_index++;
+                if(parseDrop()){
+                    parse=true;
+                }
                 break;
 
             case "delete":
@@ -252,20 +271,163 @@ public class DBServer {
         return false;
     }
 
+    //<Drop>            ::=  "DROP DATABASE " [DatabaseName] | "DROP TABLE " [TableName]
+    private static boolean parseDrop() {
+
+        if(tokens.get(current_token_index).equalsIgnoreCase("database")){
+            current_token_index++;
+            if(parseDatabaseName()){
+                if (tokens.get(current_token_index).equals(";")) {
+                    return true;
+                }
+            }
+        }else if(tokens.get(current_token_index).equalsIgnoreCase("table")){
+            current_token_index++;
+            if(parseTableName()){
+                if (tokens.get(current_token_index).equals(";")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    //<Join>            ::=  "JOIN " [TableName] " AND " [TableName] " ON " [AttributeName] " AND " [AttributeName]
+    private static boolean parseJoin() {
+
+        if(!parseTableName()){
+            return false;
+        }
+
+
+        if (!tokens.get(current_token_index).equals("AND")){
+            return false;
+        }
+
+        current_token_index++;
+
+        if (!parseTableName()){
+            return false;
+        }
+
+        if (!tokens.get(current_token_index).equals("ON")){
+            return false;
+        }
+
+        current_token_index++;
+
+        if(parseAttributeName() == null){
+            return false;
+        }
+
+        if (!tokens.get(current_token_index).equals("AND")){
+            return false;
+        }
+
+        current_token_index++;
+
+        if(parseAttributeName() == null){
+            return false;
+        }
+
+        // Check for semicolon at the end
+        if (tokens.get(current_token_index).equals(";")) {
+            return true;
+        }
+
+
+        return false;
+    }
+
+    //<Alter>           ::=  "ALTER TABLE " [TableName] " " [AlterationType] " " [AttributeName]
+    private static boolean parseAlteration() {
+        if (!tokens.get(current_token_index).equalsIgnoreCase("TABLE")) {
+            return false;
+        }
+        current_token_index++;
+
+        if (!parseTableName()) {
+            return false;
+        }
+
+        if (!parseAlterationType(tokens.get(current_token_index))) {
+            return false;
+        }
+        current_token_index++;
+
+        if (parseAttributeName() == null) {
+            return false;
+        }
+
+        // Check for semicolon at the end
+        if (tokens.get(current_token_index).equals(";")) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static boolean parseSelect() {
+
+        ArrayList<String> attributes = parseWildAttributes();
+        if (attributes == null) {
+            return false;
+        }
+
+        if (!tokens.get(current_token_index).equals("FROM")) {
+            return false;
+        }
+        current_token_index++;
+
+        if (!parseTableName()) {
+            return false;
+        }
+
+        if (tokens.size() > current_token_index && tokens.get(current_token_index).equals("WHERE")) {
+            // optional WHERE clause
+            current_token_index++;
+            return parseCondition();
+        }
+
+        if(tokens.get(current_token_index).equals(";")){
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+    private static ArrayList<String> parseWildAttributes() {
+        if (tokens.get(current_token_index).equals("*")) {
+            // consume the "*" token
+            current_token_index++;
+            ArrayList<String> attributes = new ArrayList<>();
+            attributes.add("*");
+            return attributes;
+        } else {
+            return parseAttributeList();
+        }
+    }
+
+
     //<Create>          ::=  <CreateDatabase> | <CreateTable>
     private static boolean parseCreate() {
 
         // <CreateDatabase>  ::=  "CREATE DATABASE " [DatabaseName]
         if (tokens.get(current_token_index).equalsIgnoreCase("database")) {
-            if (tokens.size() <= 4) { // identify if the command is 3 values
-                //parse okay
-                current_token_index = current_token_index + 2;
+            current_token_index++;
+            if(parseDatabaseName()){
+                if(tokens.get(current_token_index).equals(";")){
+                    return true;
+                }
             }
 
         // <CreateTable>     ::=  "CREATE TABLE " [TableName] | "CREATE TABLE " [TableName] "(" <AttributeList> ")"
         } else if (tokens.get(current_token_index).equalsIgnoreCase("table")) {
-            if (tokens.size() <= 4) {
-                //return error
+            current_token_index++;
+            if(!parseTableName()){
                 return false;
             }
 
@@ -390,6 +552,14 @@ public class DBServer {
     //[Letter]          ::=  [Uppercase] | [Lowercase]
     private static boolean parseLetter(String token) {
         return parseUppercase(token) || parseLowercase(token);
+    }
+
+    private static boolean parseAlterationType(String token) {
+        if(token.equalsIgnoreCase("ADD") ||token.equalsIgnoreCase("DROP")){
+            return true;
+        }
+
+        return false;
     }
 
     //[PlainText]       ::=  [Letter] | [Digit] | [PlainText] [Letter] | [PlainText] [Digit]
@@ -704,7 +874,14 @@ public class DBServer {
         return false;
     }
 
-
+    // [DatabaseName] ::= [PlainText]
+    public static boolean parseDatabaseName() {
+        if (tokens.size() > current_token_index && parsePlainText(tokens.get(current_token_index))) {
+            current_token_index++;
+            return true;
+        }
+        return false;
+    }
 
 
     //  === Methods below handle networking aspects of the project - you will not need to change these ! ===
