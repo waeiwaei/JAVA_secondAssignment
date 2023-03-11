@@ -21,7 +21,7 @@ public class DBServer {
     public static void main(String args[]) throws Exception {
 
         //tokenize commands from user
-        String command = "UPDATE marks SET mark = 38.88 WHERE name == 'Clive';";
+        String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
         //String command = "CREATE TABLE marks (name, mark, pass);";
         //String command = "CREATE DATABASE marks;";
 
