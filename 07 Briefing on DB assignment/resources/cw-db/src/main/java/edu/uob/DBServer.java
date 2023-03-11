@@ -21,8 +21,8 @@ public class DBServer {
     public static void main(String args[]) throws Exception {
 
         //tokenize commands from user
-        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
-        String command = "CREATE TABLE marks (name, mark, pass);";
+        String command = "UPDATE marks SET mark = 38.88 WHERE name == 'Clive';";
+        //String command = "CREATE TABLE marks (name, mark, pass);";
         //String command = "CREATE DATABASE marks;";
 
         tokenizer(command);
@@ -365,11 +365,9 @@ public class DBServer {
 
     //[Digit]           ::=  "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
     private static boolean parseDigit(String token) {
-
-        if(token.matches("[0-9]")){
+        if(token.matches("[0-9]+")){
             return true;
         }
-
         return false;
     }
 
@@ -439,7 +437,7 @@ public class DBServer {
         current_token_index++;
 
         // Match <Condition> rule
-        if (!ConditionParser()) {
+        if (!parseCondition()) {
             return false;
         }
 
@@ -452,17 +450,78 @@ public class DBServer {
     }
 
     //<Condition>       ::=  "(" <Condition> [BoolOperator] <Condition> ")" | <Condition> [BoolOperator] <Condition> | "(" [AttributeName] [Comparator] [Value] ")" | [AttributeName] [Comparator] [Value]
-    private static boolean ConditionParser() {
+    private static boolean parseCondition() {
+        if (tokens.get(current_token_index).equals("(")) {
+            // Condition enclosed in parentheses with nested conditions and boolean operators
+            current_token_index++;
+            boolean left_condition_valid = parseCondition();
+            if (!left_condition_valid) {
+                return false;
+            }
+            String bool_operator = tokens.get(current_token_index);
+            if (!parseBoolOperator(bool_operator)) {
+                return false;
+            }
+            current_token_index++;
+            boolean right_condition_valid = parseCondition();
+            if (!right_condition_valid) {
+                return false;
+            }
+            if (!tokens.get(current_token_index).equals(")")) {
+                return false;
+            }
+            current_token_index++;
+            return true;
+        } else if (parseAttributeName() != null) {
+            // Condition with attribute name, comparator, and value
+            if (!parseComparator(tokens.get(current_token_index))) {
+                return false;
+            }
+            current_token_index++;
+            if (!parseValueLiteral()) {
+                return false;
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
+    private static boolean parseComparator(String token){
+        if(token.equalsIgnoreCase("==") || token.equalsIgnoreCase("!=")|| token.equalsIgnoreCase(">")|| token.equalsIgnoreCase("<")|| token.equalsIgnoreCase("<=")|| token.equalsIgnoreCase(">=")|| token.equalsIgnoreCase("LIKE")){
+            return true;
+        }
         return false;
     }
 
-    //<NameValueList>   ::=  <NameValuePair> | <NameValuePair> "," <NameValueList>
-    private static boolean parseNameValueList() {
-        //check name-value pair
-        if(!parseNameValuePair()){
-
+    private static boolean parseBoolOperator(String token){
+        if(token.equalsIgnoreCase("AND") || token.equalsIgnoreCase("OR")){
+            return true;
         }
         return false;
+    }
+
+
+    //<NameValueList>   ::=  <NameValuePair> | <NameValuePair> "," <NameValueList>
+    private static boolean parseNameValueList() {
+        // Parse the first NameValuePair
+        if (!parseNameValuePair()) {
+            return false;
+        }
+
+        current_token_index++;
+        // Check if there are more NameValuePairs
+        if (tokens.get(current_token_index).equals(",")) {
+            // Parse the comma separator
+            current_token_index++;
+
+            // Parse the remaining NameValuePairs recursively
+            return parseNameValueList();
+        }
+
+        // If there are no more NameValuePairs, the NameValueList is valid
+        return true;
     }
 
     //<NameValuePair>   ::=  [AttributeName] "=" [Value]
@@ -548,6 +607,7 @@ public class DBServer {
             if (current_token_index < tokens.size() && tokens.get(current_token_index).equals(".")) {
                 current_token_index++;
                 if (current_token_index < tokens.size() && parseDigitSequence()) {
+                    current_token_index--;
                     return true;
                 }
             }
@@ -588,9 +648,9 @@ public class DBServer {
             // Move to the next token
             current_token_index++;
 
-            // Loop through each character in the string literal
+            // Loop through each character or string literal in the string literal
             while (current_token_index < tokens.size() && !tokens.get(current_token_index).equals("'")) {
-                // Check if the current token is a valid character literal or a nested string literal
+                // Check if the current token is a valid character or string literal
                 boolean char_or_string_literal_valid = parseCharLiteral() || parseStringLiteral();
 
                 if (!char_or_string_literal_valid) {
