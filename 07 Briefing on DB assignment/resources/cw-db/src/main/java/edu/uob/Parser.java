@@ -1,218 +1,40 @@
 package edu.uob;
 
-import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.file.Paths;
-import java.nio.file.Files;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
+public class Parser {
 
-/** This class implements the DB server. */
-public class DBServer {
+    ArrayList<String> tokens;
+    public int current_token_index;
 
-    private static final char END_OF_TRANSMISSION = 4;
-    private String storageFolderPath;
+    static String fileSeparator = File.separator;
 
-    private static ArrayList<String> tokens;
+    private int numberAttributes;
 
-    private static int current_token_index;
+    static String currentDatabase = "testing";
 
-
-//    static String fileSeparator = File.separator;
-
-//    static String currentDatabase = "testing";
-
-    public static void main(String args[]) throws Exception {
-
-        //tokenize commands from user
-        String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
-        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
-        //String command = "DELETE FROM table1 WHERE age == 29;";
-        //String command = "ALTER TABLE marks ADD percentage;";
-        //String command = "SELECT * FROM marks;";
-        //String command = "SELECT * FROM marks WHERE name != 'Dave';";
-        //String command = "CREATE TABLE marks (                        name, mark, pass);";
-        //String command = "CREATE TABLE marks;";
-        //String command = "CREATE DATABASE testing;";
-        //String command = "USE marks;";
-        //String command = "DROP TABLE coursework;";
-        //String command = "Drop        database marks;";
-        //String command = "JOIN coursework AND marks ON submission AND id;";
-        //String command = "INSERT INTO coursework VALUES('name', 20, 30);";
-
-
-        Tokenizer tokenCommands = new Tokenizer(command);
-
-        tokens = tokenCommands.tokenize();
-        System.out.println(tokens);
-
-        current_token_index = 0;
-
-        Parser p = new Parser(tokens, current_token_index);
-        p.parse();
-
-        //Parse tokens According to Grammar (BNF.txt)
-//        if(parseCommand()){
-//            System.out.println("Parsed okay");
-//        }else{
-//            System.out.println("Fail Parse");
-//        }
-
-//        Parser parser = new Parser(tokens, current_token_index);
-//        if(parser.parse() == true){
-//            System.out.println("Parsed OK");
-//        }else{
-//            System.out.println("Fail Parse");
-//        }
-
-
-        /*READ AND WRITE TO FILES IN THE RELATIVE FILE PATH*/
-//        String fileSeparator = File.separator;
-//        //example command to write to file
-//        //Structure to store tables
-//        ArrayList <ArrayList<String>> tables = new ArrayList<ArrayList<String>>();
-//        String command = "CREATE TABLE marks (name, mark, pass);";
-//
-//        //store individual tokens in String object array
-//        String[] token;
-//        token = command.split("\s");
-//
-//        //identify the number of columns to create
-//        int counter = 0;
-//        for (int i = 0; i < command.length(); i++){
-//            char c = command.charAt(i);
-//            if(c == '('){
-//                while(c != ')'){
-//                    c=command.charAt(i);
-//                    if(c == ','){
-//                        counter++;
-//                    }
-//                    i++;
-//                }
-//                counter++;
-//            }
-//        }
-//
-//        //add columns - based on comma delimiter for columns
-//        tables.add(new ArrayList<String>());
-//        for(int i = 0; i < counter; i++) {
-//            tables.get(0).add(null);
-//        }
-//
-//        tables.get(0).set(0, token[3].replaceAll("[,.();]",""));
-//        tables.get(0).set(1, token[4].replaceAll("[,.();]",""));
-//        tables.get(0).set(2, token[5].replaceAll("[,.();]",""));
-//
-//        //input to a new file - write to it
-//        FileWriter f2 = new FileWriter(".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator+ token[2]+".tab");
-//        BufferedWriter bw = new BufferedWriter(f2);
-//
-//        bw.write("id");
-//        bw.write("\t");
-//        bw.write(tables.get(0).get(0));
-//        bw.write("\t");
-//        bw.write(tables.get(0).get(1));
-//        bw.write("\t");
-//        bw.write(tables.get(0).get(2));
-//
-//        bw.close();
-//
-//
-//
-//
-//
-//
-//        // Read from a file and store within 2D array
-//        File f = new File(".."+fileSeparator+"people.tab");
-//        FileInputStream fiStream = new FileInputStream(f);
-//        BufferedReader br = new BufferedReader(new InputStreamReader(fiStream));
-//
-//
-//
-//        String[] columnHeader;
-//        //read the first row - column header
-//        String s = br.readLine();
-//        ArrayList<ArrayList<String>> read_file = new ArrayList<ArrayList<String>>();
-//        read_file.add(new ArrayList<>());
-//        read_file.get(0).add(null);
-////        columnHeader = s.split("\t");
-////
-////        for(int i = 0; i < columnHeader.length;i++){
-////            System.out.println(columnHeader[i]);
-////        }
-//
-//        int i = 0;
-//        while(s != null){
-//            s = br.readLine();
-//            if(s.isEmpty()){
-//                break;
-//            }
-//
-//            if(i < counter) {
-//                for (int j = 0; j <= 3; j++) {
-//                    read_file.get(i).set(j, Arrays.toString(s.split("\t")));
-//                }
-//                i++;
-//            }
-//        }
-
-
-        DBServer server = new DBServer();
-        server.blockingListenOn(8888);
-
+    public Parser(ArrayList<String> token, Integer current_token_index){
+        this.tokens = token;
+        this.current_token_index = current_token_index;
     }
 
-    /**
-    * KEEP this signature otherwise we won't be able to mark your submission correctly.
-    */
-    public DBServer() {
-        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
-        try {
-            // Create the database storage folder if it doesn't already exist !
-            Files.createDirectories(Paths.get(storageFolderPath));
-        } catch(IOException ioe) {
-            System.out.println("Can't seem to create database storage folder " + storageFolderPath);
+    public boolean parse() throws Exception {
+        if(parseCommand()){
+            System.out.print("Parsed Okay");
+            return true;
+        }else{
+            System.out.print("Parse Fail");
         }
-    }
-
-    /**
-    * KEEP this signature (i.e. {@code edu.uob.DBServer.handleCommand(String)}) otherwise we won't be
-    * able to mark your submission correctly.
-    *
-    * <p>This method handles all incoming DB commands and carries out the required actions.
-    */
-    public String handleCommand(String command) {
-        // TODO implement your server logic here
-
-
-        return "";
+        return false;
     }
 
 
-    public static ArrayList<String> tokenize(String command){
-        String[] specialChar = {",", ";", "'", ")", "(", ".", "+"};
-
-        // lookahead matches a position in the input string that is followed by one of the special characters, string array or a whitespace character
-        // lookbehind matches a position in the input string that is preceded by one of the special characters, string array or a whitespace character.
-        String regex = "(?=[" + String.join("", specialChar) + "\\s])|(?<=[" + String.join("", specialChar) + "\\s])";
-
-        String[] tokensArray = command.split(regex);
-
-        tokens = new ArrayList<String>();
-        for (String token : tokensArray) {
-            if (!token.trim().isEmpty()) {
-                tokens.add(token.trim());
-            }
-        }
-
-        return tokens;
-
-    }
-
-    /*
     //<Command>         ::=  <CommandType> ";"
-    private static boolean parseCommand() throws Exception {
+    private boolean parseCommand() throws Exception {
         // Try to match <CommandType> rule
         if (!parseCommandType()) {
             return false;
@@ -227,7 +49,7 @@ public class DBServer {
     }
 
     //<CommandType>     ::=  <Use> | <Create> | <Drop> | <Alter> | <Insert> | <Select> | <Update> | <Delete> | <Join>
-    public static boolean parseCommandType() throws Exception{
+    public boolean parseCommandType() throws Exception{
 
         boolean parse = false;
 
@@ -261,7 +83,10 @@ public class DBServer {
                 break;
 
             case "insert":
-                //parseInsert();
+                current_token_index++;
+                if(parseInsert()){
+                    parse= true;
+                }
                 break;
 
             case "join":
@@ -278,7 +103,7 @@ public class DBServer {
                 }
                 break;
 
-                case "use":
+            case "use":
                 current_token_index++;
                 if(parseUse()){
                     parse=true;
@@ -286,7 +111,10 @@ public class DBServer {
                 break;
 
             case "delete":
-                //parseDelete();
+                current_token_index++;
+                if(parseDelete()) {
+                    parse=true;
+                }
                 break;
             default:
                 throw new Exception("Invalid command typed :" + tokens.get(current_token_index));
@@ -299,18 +127,100 @@ public class DBServer {
         return false;
     }
 
-    private static boolean parseUse() {
+    private boolean parseInsert() {
+
+        if(!tokens.get(current_token_index).equalsIgnoreCase("Into")){
+            return false;
+        }
+
+        current_token_index++;
+
+        if(!parseTableName()){
+            return false;
+        }
+
+        current_token_index++;
+
+        if(!tokens.get(current_token_index).equalsIgnoreCase("Values")){
+            return false;
+        }
+
+        current_token_index++;
+
+
+        if(tokens.get(current_token_index).equalsIgnoreCase("(")){
+            current_token_index++;
+            if(!parseValueList()){
+                return false;
+            }
+
+            if(tokens.get(current_token_index).equalsIgnoreCase(")")){
+                current_token_index++;
+            }
+        }
+
+        return true;
+    }
+
+
+
+    private boolean parseValueList() {
+        // Check if there is at least one Value
+        if (!parseValueLiteral()) {
+            return false;
+        }
+
+        // Check if there are additional Values separated by commas
+        while (tokens.get(current_token_index).equals(",")) {
+            // Consume the comma token
+            current_token_index++;
+
+            // Check if there is another Value after the comma
+            if (!parseValueLiteral()) {
+                return false;
+            }
+        }
+
+        // If we reached here, the ValueList is valid
+        return true;
+    }
+
+
+    private boolean parseDelete() {
+
+        if(!tokens.get(current_token_index).equalsIgnoreCase("From")){
+            return false;
+        }
+
+        current_token_index++;
+
+        if(!parseTableName()){
+            return false;
+        }
+
+        current_token_index++;
+
+        if(!tokens.get(current_token_index).equalsIgnoreCase("Where")){
+            return false;
+        }
+
+        current_token_index++;
+
+        if(!parseCondition()){
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean parseUse() {
 
         if(parseDatabaseName()){
 
-            */
-/*INTERPRETER--------------------------*//*
-
+            /*INTERPRETER--------------------------*/
             currentDatabase = tokens.get(current_token_index);
             current_token_index++;
-            */
-/*-------------------------------------*//*
-
+            /*-------------------------------------*/
             return true;
         }
 
@@ -319,7 +229,7 @@ public class DBServer {
     }
 
     //<Drop>            ::=  "DROP DATABASE " [DatabaseName] | "DROP TABLE " [TableName]
-    private static boolean parseDrop() {
+    private boolean parseDrop() {
 
         if(tokens.get(current_token_index).equalsIgnoreCase("database")){
             current_token_index++;
@@ -343,7 +253,7 @@ public class DBServer {
     }
 
     //<Join>            ::=  "JOIN " [TableName] " AND " [TableName] " ON " [AttributeName] " AND " [AttributeName]
-    private static boolean parseJoin() {
+    private boolean parseJoin() {
 
         if(!parseTableName()){
             return false;
@@ -393,7 +303,7 @@ public class DBServer {
     }
 
     //<Alter>           ::=  "ALTER TABLE " [TableName] " " [AlterationType] " " [AttributeName]
-    private static boolean parseAlteration() throws IOException {
+    private boolean parseAlteration() throws IOException {
         String val;
         if (!tokens.get(current_token_index).equalsIgnoreCase("TABLE")) {
             return false;
@@ -425,7 +335,7 @@ public class DBServer {
         return false;
     }
 
-    private static boolean parseSelect() {
+    private boolean parseSelect() {
 
         ArrayList<String> attributes = parseWildAttributes();
         if (attributes == null) {
@@ -458,7 +368,7 @@ public class DBServer {
 
 
 
-    private static ArrayList<String> parseWildAttributes() {
+    private ArrayList<String> parseWildAttributes() {
         if (tokens.get(current_token_index).equals("*")) {
             // consume the "*" token
             current_token_index++;
@@ -472,16 +382,14 @@ public class DBServer {
 
 
     //<Create>          ::=  <CreateDatabase> | <CreateTable>
-    private static boolean parseCreate() throws IOException {
+    private boolean parseCreate() throws IOException {
 
         // <CreateDatabase>  ::=  "CREATE DATABASE " [DatabaseName]
         if (tokens.get(current_token_index).equalsIgnoreCase("database")) {
             current_token_index++;
             if(parseDatabaseName()){
 
-            */
-/*INTERPRETER-----------------------------------------------------------------------------------------*//*
-
+                /*INTERPRETER-----------------------------------------------------------------------------------------*/
                 File database_create=new File(".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator+tokens.get(current_token_index));
 
                 if(!database_create.exists()){
@@ -495,42 +403,32 @@ public class DBServer {
                     return true;
                 }
             }
-            */
-/*--------------------------------------------------------------------------------------------------------*//*
+            /*--------------------------------------------------------------------------------------------------------*/
 
 
 
 
-
-        // <CreateTable>     ::=  "CREATE TABLE " [TableName] | "CREATE TABLE " [TableName] "(" <AttributeList> ")"
+            // <CreateTable>     ::=  "CREATE TABLE " [TableName] | "CREATE TABLE " [TableName] "(" <AttributeList> ")"
         } else if (tokens.get(current_token_index).equalsIgnoreCase("table")) {
             current_token_index++;
 
-            */
-/*INTERPRETER-----------------------------------------------------------------------------------------*//*
-
+            /*INTERPRETER-----------------------------------------------------------------------------------------*/
 
             FileWriter createTable = null;
 
-            */
-/*----------------------------------------------------------------------------------------------------*//*
-
+            /*----------------------------------------------------------------------------------------------------*/
 
 
             if (!parseTableName()) {
                 return false;
             }
 
-            */
-/*INTERPRETER-----------------------------------------------------------------------------------------*//*
-
+            /*INTERPRETER-----------------------------------------------------------------------------------------*/
 
             createTable = new FileWriter(".." + fileSeparator + "cw-db" + fileSeparator + "databases" + fileSeparator + currentDatabase + fileSeparator + tokens.get(current_token_index)+".tab");
             BufferedWriter bw = new BufferedWriter(createTable);
 
-            */
-/*----------------------------------------------------------------------------------------------------*//*
-
+            /*----------------------------------------------------------------------------------------------------*/
 
             if (tokens.contains("(")) {
                 current_token_index = tokens.indexOf("(") + 1;  // identify first attribute
@@ -550,11 +448,13 @@ public class DBServer {
                     System.out.println("No attributes were found");
                 }
 
-                */
-/*INTERPRETER---------------------------------------------------------------------------------------------*//*
-
+                /*INTERPRETER---------------------------------------------------------------------------------------------*/
 
                 if(attributes.size() > 0){
+
+                    bw.write("id");
+                    bw.write("\t");
+
 
                     for(int i = 0; i < attributes.size(); i++){
                         bw.write(attributes.get(i));
@@ -562,9 +462,7 @@ public class DBServer {
                     }
 
                 }
-                */
-/*--------------------------------------------------------------------------------------------------------*//*
-
+                /*--------------------------------------------------------------------------------------------------------*/
 
             }
 
@@ -586,7 +484,7 @@ public class DBServer {
     }
 
     //<AttributeList>   ::=  [AttributeName] | [AttributeName] "," <AttributeList>
-    private static ArrayList<String> parseAttributeList() {
+    private ArrayList<String> parseAttributeList() {
         ArrayList<String> attributes = new ArrayList<>();
 
         while (current_token_index < tokens.indexOf(")")) {
@@ -608,12 +506,14 @@ public class DBServer {
             }
         }
 
+        numberAttributes = attributes.size();
+
         return attributes;
     }
 
 
     // [AttributeName]   ::=  [PlainText] | [TableName] "." [PlainText]
-    private static String parseAttributeName() {
+    private  String parseAttributeName() {
         String attributeName = "";
 
         // Check if the attribute name is a plain text or a table name and plain text
@@ -638,7 +538,7 @@ public class DBServer {
 
 
     //[Space]           ::=  " "
-    private static boolean parseSpace(String token) {
+    private boolean parseSpace(String token) {
         if(token.equals(" ")){
             return true;
         }
@@ -646,7 +546,7 @@ public class DBServer {
     }
 
     //[Digit]           ::=  "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-    private static boolean parseDigit(String token) {
+    private boolean parseDigit(String token) {
         if(token.matches("[0-9]+")){
             return true;
         }
@@ -654,23 +554,23 @@ public class DBServer {
     }
 
     //[Symbol]          ::=  "!" | "#" | "$" | "%" | "&" | "(" | ")" | "*" | "+" | "," | "-" | "." | "/" | ":" | ";" | ">" | "=" | "<" | "?" | "@" | "[" | "\" | "]" | "^" | "_" | "`" | "{" | "}" | "~"
-    private static boolean parseSymbol(String token) {
+    private boolean parseSymbol(String token) {
         String regex = "[!#$%&()*+,-./:;>=<?@\\[\\]\\^_`\\{\\}|~]*";
         return token.matches(regex);
     }
 
     //[Uppercase]       ::=  "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
-    private static boolean parseUppercase(String token) {
+    private boolean parseUppercase(String token) {
         return token.matches("[A-Z]");
     }
 
     //[Lowercase]       ::=  "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
-    private static boolean parseLowercase(String token) {
+    private boolean parseLowercase(String token) {
         return token.matches("[a-z]");
     }
 
     //[Letter]          ::=  [Uppercase] | [Lowercase]
-    private static boolean parseLetter(String token) {
+    private boolean parseLetter(String token) {
         return parseUppercase(token) || parseLowercase(token);
     }
 
@@ -683,7 +583,7 @@ public class DBServer {
     }
 
     //[PlainText]       ::=  [Letter] | [Digit] | [PlainText] [Letter] | [PlainText] [Digit]
-    private static boolean parsePlainText(String token) {
+    private boolean parsePlainText(String token) {
 
         if (token == null) {
             return false;
@@ -703,7 +603,7 @@ public class DBServer {
 
 
     // <Update>          ::=  "UPDATE " [TableName] " SET " <NameValueList> " WHERE " <Condition>
-    public static boolean parseUpdate() throws Exception {
+    public boolean parseUpdate() throws Exception {
         // Match [TableName] rule
         if (!parseTableName()) {
             return false;
@@ -742,7 +642,7 @@ public class DBServer {
     }
 
     //<Condition>       ::=  "(" <Condition> [BoolOperator] <Condition> ")" | <Condition> [BoolOperator] <Condition> | "(" [AttributeName] [Comparator] [Value] ")" | [AttributeName] [Comparator] [Value]
-    private static boolean parseCondition() {
+    private boolean parseCondition() {
         if (tokens.get(current_token_index).equals("(")) {
             // Condition enclosed in parentheses with nested conditions and boolean operators
             current_token_index++;
@@ -780,14 +680,14 @@ public class DBServer {
     }
 
 
-    private static boolean parseComparator(String token){
+    private boolean parseComparator(String token){
         if(token.equalsIgnoreCase("==") || token.equalsIgnoreCase("!=")|| token.equalsIgnoreCase(">")|| token.equalsIgnoreCase("<")|| token.equalsIgnoreCase("<=")|| token.equalsIgnoreCase(">=")|| token.equalsIgnoreCase("LIKE")){
             return true;
         }
         return false;
     }
 
-    private static boolean parseBoolOperator(String token){
+    private boolean parseBoolOperator(String token){
         if(token.equalsIgnoreCase("AND") || token.equalsIgnoreCase("OR")){
             return true;
         }
@@ -796,13 +696,13 @@ public class DBServer {
 
 
     //<NameValueList>   ::=  <NameValuePair> | <NameValuePair> "," <NameValueList>
-    private static boolean parseNameValueList() {
+    private boolean parseNameValueList() {
         // Parse the first NameValuePair
         if (!parseNameValuePair()) {
             return false;
         }
 
-        current_token_index++;
+        //current_token_index++;
         // Check if there are more NameValuePairs
         if (tokens.get(current_token_index).equals(",")) {
             // Parse the comma separator
@@ -817,7 +717,7 @@ public class DBServer {
     }
 
     //<NameValuePair>   ::=  [AttributeName] "=" [Value]
-    private static boolean parseNameValuePair() {
+    private boolean parseNameValuePair() {
 
         if(parseAttributeName().isEmpty()){
             return false;
@@ -835,9 +735,9 @@ public class DBServer {
 
         return false;
     }
-    
+
     // [Value]           ::=  "'" [StringLiteral] "'" | [BooleanLiteral] | [FloatLiteral] | [IntegerLiteral] | "NULL"
-    private static boolean parseValueLiteral() {
+    private boolean parseValueLiteral() {
         String current_token = tokens.get(current_token_index);
 
         if (current_token.equals("NULL")) {
@@ -849,11 +749,16 @@ public class DBServer {
             // If the current token is a single quote, it's the start of a string literal
             current_token_index++;
 
-            // Parse the string literal
-            boolean string_literal_valid = parseStringLiteral();
+            if(tokens.get(current_token_index).equals("'")){
+                //System.out.print("Parse Val literal "+ current_token_index);
+                return true;
+            }
 
-            if(string_literal_valid && tokens.get(current_token_index).equals("'")) {
+            current_token_index++;
+
+            if(tokens.get(current_token_index).equals("'")) {
                 // If the string literal is valid and we've reached the end single quote, the value literal is valid
+                current_token_index++;
                 return true;
             }
         }
@@ -867,6 +772,7 @@ public class DBServer {
         }
 
         if(parseIntegerLiteral()){
+            current_token_index++;
             return true;
         }
 
@@ -876,7 +782,7 @@ public class DBServer {
     }
 
     //[IntegerLiteral]  ::=  [DigitSequence] | "-" [DigitSequence] | "+" [DigitSequence]
-    private static boolean parseIntegerLiteral() {
+    private boolean parseIntegerLiteral() {
         int initialIndex = current_token_index;
         if (current_token_index < tokens.size() && (tokens.get(current_token_index).equals("+") || tokens.get(current_token_index).equals("-"))) {
             current_token_index++;
@@ -890,7 +796,7 @@ public class DBServer {
     }
 
     // [FloatLiteral]    ::=  [DigitSequence] "." [DigitSequence] | "-" [DigitSequence] "." [DigitSequence] | "+" [DigitSequence] "." [DigitSequence]
-    private static boolean parseFloatLiteral() {
+    private boolean parseFloatLiteral() {
         int initialIndex = current_token_index;
         if (current_token_index < tokens.size() && (tokens.get(current_token_index).equals("+") || tokens.get(current_token_index).equals("-"))) {
             current_token_index++;
@@ -909,7 +815,7 @@ public class DBServer {
     }
 
     //[DigitSequence]   ::=  [Digit] | [Digit] [DigitSequence]
-    private static boolean parseDigitSequence() {
+    private boolean parseDigitSequence() {
         if (parseDigit(tokens.get(current_token_index))) {
             current_token_index++;
             if (current_token_index < tokens.size() && parseDigitSequence()) {
@@ -921,7 +827,7 @@ public class DBServer {
     }
 
     //[BooleanLiteral]  ::=  "TRUE" | "FALSE"
-    private static boolean parseBooleanLiteral() {
+    private boolean parseBooleanLiteral() {
         if(tokens.get(current_token_index).equalsIgnoreCase("TRUE") || tokens.get(current_token_index).equalsIgnoreCase("FALSE")){
             return true;
         }
@@ -929,43 +835,12 @@ public class DBServer {
         return false;
     }
 
-    //[StringLiteral]   ::=  "" | [CharLiteral] | [StringLiteral] [CharLiteral]
-    private static boolean parseStringLiteral() {
-        if (tokens.get(current_token_index).equals("")) {
-            // Empty string literal is valid
-            return true;
-        }
+    //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
 
-        if (tokens.get(current_token_index).equals("'")) {
-            // Move to the next token
-            current_token_index++;
 
-            // Loop through each character or string literal in the string literal
-            while (current_token_index < tokens.size() && !tokens.get(current_token_index).equals("'")) {
-                // Check if the current token is a valid character or string literal
-                boolean char_or_string_literal_valid = parseCharLiteral() || parseStringLiteral();
-
-                if (!char_or_string_literal_valid) {
-                    // If the current token is not a valid character or string literal, the string literal is not valid
-                    return false;
-                }
-
-                // Move to the next token
-                current_token_index++;
-            }
-
-            // If the string literal ends with a single quote, it's valid
-            if (current_token_index < tokens.size() && tokens.get(current_token_index).equals("'")) {
-                return true;
-            }
-        }
-
-        // If we haven't returned true by this point, the string literal is not valid
-        return false;
-    }
 
     //[CharLiteral]     ::=  [Space] | [Letter] | [Symbol] | [Digit]
-    private static boolean parseCharLiteral() {
+    private boolean parseCharLiteral() {
 
         if(parseSpace(tokens.get(current_token_index))){
             return true;
@@ -988,7 +863,7 @@ public class DBServer {
 
 
     // [TableName] ::= [PlainText]
-    public static boolean parseTableName() {
+    public boolean parseTableName() {
         if (tokens.size() > current_token_index && parsePlainText(tokens.get(current_token_index))) {
             return true;
         }
@@ -996,46 +871,13 @@ public class DBServer {
     }
 
     // [DatabaseName] ::= [PlainText]
-    public static boolean parseDatabaseName() {
+    public boolean parseDatabaseName() {
         if (tokens.size() > current_token_index && parsePlainText(tokens.get(current_token_index))) {
             return true;
         }
         return false;
     }
 
-*/
 
-    //  === Methods below handle networking aspects of the project - you will not need to change these ! ===
 
-    public void blockingListenOn(int portNumber) throws IOException {
-        try (ServerSocket s = new ServerSocket(portNumber)) {
-            System.out.println("Server listening on port " + portNumber);
-            while (!Thread.interrupted()) {
-                try {
-                    blockingHandleConnection(s);
-                } catch (IOException e) {
-                    System.err.println("Server encountered a non-fatal IO error:");
-                    e.printStackTrace();
-                    System.err.println("Continuing...");
-                }
-            }
-        }
-    }
-
-    private void blockingHandleConnection(ServerSocket serverSocket) throws IOException {
-        try (Socket s = serverSocket.accept();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
-        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()))) {
-
-            System.out.println("Connection established: " + serverSocket.getInetAddress());
-            while (!Thread.interrupted()) {
-                String incomingCommand = reader.readLine();
-                System.out.println("Received message: " + incomingCommand);
-                String result = handleCommand(incomingCommand);
-                writer.write(result);
-                writer.write("\n" + END_OF_TRANSMISSION + "\n");
-                writer.flush();
-            }
-        }
-    }
 }
