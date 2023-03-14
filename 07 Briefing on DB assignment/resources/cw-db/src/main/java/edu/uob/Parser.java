@@ -426,51 +426,6 @@ public class Parser {
         return true;
     }
 
-    //DO IT LAST
-    //<Condition>       ::=  "(" <Condition> [BoolOperator] <Condition> ")" | <Condition> [BoolOperator] <Condition> | "(" [AttributeName] [Comparator] [Value] ")" | [AttributeName] [Comparator] [Value]
-/*    private Condition parseCondition(Tokenizer tk) throws Exception {
-        if (tk.hasMoreTokens()) {
-            String token = tk.nextToken();
-            if (token.equals("(")) {
-                // parse sub-expression
-                Condition leftCondition = parseCondition(tk);
-                String boolOperator = parseBoolOperator(tk.nextToken());
-                Condition rightCondition = parseCondition(tk);
-                if (!tk.nextToken().equals(")")) {
-                    throw new Exception("Parse Failed - parseCondition: invalid syntax");
-                }
-                // combine sub-expressions
-                Condition condition = new Condition();
-                condition.cnd1 = leftCondition;
-                condition.cnd2 = rightCondition;
-                condition.boolOperator = boolOperator;
-                return condition;
-            } else {
-                String attributeName = parseAttributeName(tk);
-                String comparator = parseComparator(tk.nextToken());
-                String value = parseValueLiteral(tk);
-
-                Condition condition = new Condition();
-                condition.attributeName = attributeName;
-                condition.comparator = comparator;
-                condition.value = value;
-
-                if (tk.hasMoreTokens()) {
-                    String boolOperator = parseBoolOperator(tk.nextToken());
-                    // recursively parse and combine expressions
-                    Condition nextCondition = parseCondition(tk);
-                    Condition combinedCondition = new Condition();
-                    combinedCondition.cnd1 = condition;
-                    combinedCondition.boolOperator = boolOperator;
-                    combinedCondition.cnd2 = nextCondition;
-                    return combinedCondition;
-                }
-                return condition;
-            }
-        }
-        return null;
-    }*/
-
     private Condition parseCondition(Tokenizer tk) throws Exception {
         Condition result = null;
 
@@ -479,7 +434,7 @@ public class Parser {
             if (token.equals("(")) {
                 // parse sub-expression
                 Condition leftCondition = parseCondition(tk);
-                String boolOperator = parseBoolOperator(tk.nextToken());
+                String boolOperator = parseBoolOperator(tk.getCurrentToken());
                 Condition rightCondition = parseCondition(tk);
                 if (!tk.nextToken().equals(")")) {
                     throw new Exception("Parse Failed - parseCondition: invalid syntax");
@@ -491,11 +446,12 @@ public class Parser {
                 condition.boolOperator = boolOperator;
                 result = condition;
             } else {
+
+
                 tk.setTokenIndex(tk.getCurrent_token_index() - 1);
                 String attributeName = parseAttributeName(tk);
                 tk.setTokenIndex(tk.getCurrent_token_index() + 1);
-                String comparator = parseComparator(tk.nextToken());
-                tk.setTokenIndex(tk.getCurrent_token_index() + 1);
+                String comparator = parseComparator(tk.getCurrentToken());
                 String value = parseValueLiteral(tk);
 
                 Condition condition = new Condition();
@@ -662,7 +618,7 @@ public class Parser {
 
         String subIntegerLiteral = "";
 
-        subIntegerLiteral = parseDigitSequence(tk.getCurrentToken());
+        subIntegerLiteral = parseDigitSequence(tk.nextToken());
 
         if (subIntegerLiteral != null) {
             integerLiteral += subIntegerLiteral;
