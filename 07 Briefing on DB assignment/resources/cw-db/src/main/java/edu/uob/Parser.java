@@ -1,9 +1,5 @@
 package edu.uob;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 
 public class Parser {
@@ -88,6 +84,120 @@ public class Parser {
 
     }
 
+
+    //<Create>          ::=  <CreateDatabase> | <CreateTable>
+    private void parseCreate(Tokenizer tk) throws Exception {
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse failed - Create");
+        }
+
+        String token = tk.nextToken();
+
+        // <CreateDatabase>  ::=  "CREATE DATABASE " [DatabaseName]
+        if (token.equalsIgnoreCase("database")) {
+            dbstate.commandtype += " " + tk.getCurrentToken();
+            parseDatabaseName(tk);
+
+            // <CreateTable>     ::=  "CREATE TABLE " [TableName] | "CREATE TABLE " [TableName] "(" <AttributeList> ")"
+        } else if (token.equalsIgnoreCase("table")) {
+            dbstate.commandtype += " " + tk.getCurrentToken();
+
+            parseTableName(tk);
+
+            if (tk.contains("(")) {
+
+                dbstate.colNames = new ArrayList<String>();
+                // Parse the attribute list
+                parseAttributeList(tk);
+
+            }
+        }
+
+        tk.setTokenIndex(tk.getCurrent_token_index()+1);
+
+    }
+
+    // <Update>          ::=  "UPDATE " [TableName] " SET " <NameValueList> " WHERE " <Condition>
+    public boolean parseUpdate(Tokenizer tk) throws Exception {
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse Failed - parseUpdate");
+        }
+
+        parseTableName(tk);
+
+
+        // Match "SET" token
+        if (!tk.nextToken().equalsIgnoreCase("set")) {
+            throw new Exception("Parse Failed - parseUpdate");
+        }
+
+        dbstate.nameValueList = new ArrayList<NameValue>();
+        parseNameValueList(tk);
+
+        // Match "WHERE" token
+        if (!tk.nextToken().equalsIgnoreCase("where")) {
+            throw new Exception("Parse Failed - parseUpdate");
+        }
+
+        // Match <Condition> rule
+        dbstate.conditions = new ArrayList<Condition>();
+        dbstate.conditions.add(parseCondition(tk));
+
+        return true;
+    }
+
+
+    private void parseSelect(Tokenizer tk) throws Exception {
+
+        parseWildAttributes(tk);
+
+        if (!tk.nextToken().equalsIgnoreCase("From")) {
+            throw new Exception("Parse Failed - parseSelect");
+        }
+
+        parseTableName(tk);
+
+        if(tk.nextToken().equals(";")){
+            return;
+        }
+
+        if (tk.getCurrentToken().equalsIgnoreCase("Where")) {
+            dbstate.conditions = new ArrayList<Condition>();
+            dbstate.conditions.add(parseCondition(tk));
+
+        } else{
+            throw new Exception("Parse Failed - parseSelect");
+        }
+
+
+        return;
+    }
+
+    //<Alter>           ::=  "ALTER TABLE " [TableName] " " [AlterationType] " " [AttributeName]
+    private void parseAlteration(Tokenizer tk) throws Exception {
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse Failed - parseAlteration");
+        }
+
+        if (!tk.nextToken().equalsIgnoreCase("TABLE")) {
+            throw new Exception("Parse Failed - parseAlteration");
+        }
+
+        parseTableName(tk);
+        parseAlterationType(tk.nextToken());
+
+
+        dbstate.colNames = new ArrayList<String>();
+        dbstate.colNames.add(parseAttributeName(tk));
+
+        tk.setTokenIndex(tk.getCurrent_token_index()+2);
+
+    }
+
+
     private void parseInsert(Tokenizer tk) throws Exception{
 
         if(!tk.nextToken().equalsIgnoreCase("Into")){
@@ -115,64 +225,6 @@ public class Parser {
     }
 
 
-
-    private void parseValueList(Tokenizer tk) throws Exception{
-        // Check if there is at least one Value
-        dbstate.values.add(parseValueLiteral(tk));
-
-        if(tk.nextToken().equals(",")){
-            if(tk.getCurrentToken().equals(")")){
-                return;
-            }
-            tk.setTokenIndex(tk.getCurrent_token_index()+1);
-            parseValueList(tk);
-
-        }
-
-    }
-
-
-    private void parseDelete(Tokenizer tk) throws Exception {
-
-        if(!tk.nextToken().equalsIgnoreCase("From")){
-            throw new Exception("Parse Failed - parseDelete");
-        }
-
-        parseTableName(tk);
-
-        if(!tk.nextToken().equalsIgnoreCase("Where")){
-            throw new Exception("Parse Failed - parseDelete");
-        }
-
-        dbstate.conditions = new ArrayList<Condition>();
-        dbstate.conditions.add(parseCondition(tk));
-
-    }
-
-    private void parseUse(Tokenizer tk) throws Exception {
-
-        parseDatabaseName(tk);
-        tk.setTokenIndex(tk.getCurrent_token_index() + 1);
-
-    }
-
-    //<Drop>            ::=  "DROP DATABASE " [DatabaseName] | "DROP TABLE " [TableName]
-    private void parseDrop(Tokenizer tk) throws Exception {
-
-        String token = tk.nextToken();
-
-        if(token.equalsIgnoreCase("database")){
-            dbstate.commandtype +=" " + tk.getCurrentToken();
-            parseDatabaseName(tk);
-
-        }else if(token.equalsIgnoreCase("table")){
-            dbstate.commandtype += " " + tk.getCurrentToken();
-            parseTableName(tk);
-
-        }
-
-        tk.setTokenIndex(tk.getCurrent_token_index()+1);
-    }
 
     //<Join>            ::=  "JOIN " [TableName] " AND " [TableName] " ON " [AttributeName] " AND " [AttributeName]
     private void parseJoin(Tokenizer tk) throws Exception {
@@ -217,52 +269,68 @@ public class Parser {
 
     }
 
-    //<Alter>           ::=  "ALTER TABLE " [TableName] " " [AlterationType] " " [AttributeName]
-    private void parseAlteration(Tokenizer tk) throws Exception {
 
-        if(!tk.hasMoreTokens()){
-            throw new Exception("Parse Failed - parseAlteration");
+
+
+
+    //<Drop>            ::=  "DROP DATABASE " [DatabaseName] | "DROP TABLE " [TableName]
+    private void parseDrop(Tokenizer tk) throws Exception {
+
+        String token = tk.nextToken();
+
+        if(token.equalsIgnoreCase("database")){
+            dbstate.commandtype +=" " + tk.getCurrentToken();
+            parseDatabaseName(tk);
+
+        }else if(token.equalsIgnoreCase("table")){
+            dbstate.commandtype += " " + tk.getCurrentToken();
+            parseTableName(tk);
+
         }
 
-        if (!tk.nextToken().equalsIgnoreCase("TABLE")) {
-            throw new Exception("Parse Failed - parseAlteration");
-        }
-
-        parseTableName(tk);
-        parseAlterationType(tk.nextToken());
+        tk.setTokenIndex(tk.getCurrent_token_index()+1);
+    }
 
 
-        dbstate.colNames = new ArrayList<String>();
-        dbstate.colNames.add(parseAttributeName(tk));
+    private void parseUse(Tokenizer tk) throws Exception {
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+2);
+        parseDatabaseName(tk);
+        tk.setTokenIndex(tk.getCurrent_token_index() + 1);
 
     }
 
-    private void parseSelect(Tokenizer tk) throws Exception {
 
-        parseWildAttributes(tk);
+    private void parseDelete(Tokenizer tk) throws Exception {
 
-        if (!tk.nextToken().equalsIgnoreCase("From")) {
-            throw new Exception("Parse Failed - parseSelect");
+        if(!tk.nextToken().equalsIgnoreCase("From")){
+            throw new Exception("Parse Failed - parseDelete");
         }
 
         parseTableName(tk);
 
-        if(tk.nextToken().equals(";")){
-            return;
+        if(!tk.nextToken().equalsIgnoreCase("Where")){
+            throw new Exception("Parse Failed - parseDelete");
         }
 
-        if (tk.getCurrentToken().equalsIgnoreCase("Where")) {
-            dbstate.conditions = new ArrayList<Condition>();
-            dbstate.conditions.add(parseCondition(tk));
+        dbstate.conditions = new ArrayList<Condition>();
+        dbstate.conditions.add(parseCondition(tk));
 
-        } else{
-            throw new Exception("Parse Failed - parseSelect");
+    }
+
+
+    private void parseValueList(Tokenizer tk) throws Exception{
+        // Check if there is at least one Value
+        dbstate.values.add(parseValueLiteral(tk));
+
+        if(tk.nextToken().equals(",")){
+            if(tk.getCurrentToken().equals(")")){
+                return;
+            }
+            tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            parseValueList(tk);
+
         }
 
-
-        return;
     }
 
 
@@ -279,39 +347,6 @@ public class Parser {
         }
     }
 
-
-    //<Create>          ::=  <CreateDatabase> | <CreateTable>
-    private void parseCreate(Tokenizer tk) throws Exception {
-
-        if(!tk.hasMoreTokens()){
-            throw new Exception("Parse failed - Create");
-        }
-
-        String token = tk.nextToken();
-
-        // <CreateDatabase>  ::=  "CREATE DATABASE " [DatabaseName]
-        if (token.equalsIgnoreCase("database")) {
-            dbstate.commandtype += " " + tk.getCurrentToken();
-            parseDatabaseName(tk);
-
-           // <CreateTable>     ::=  "CREATE TABLE " [TableName] | "CREATE TABLE " [TableName] "(" <AttributeList> ")"
-        } else if (token.equalsIgnoreCase("table")) {
-            dbstate.commandtype += " " + tk.getCurrentToken();
-
-            parseTableName(tk);
-
-            if (tk.contains("(")) {
-
-                dbstate.colNames = new ArrayList<String>();
-                // Parse the attribute list
-                parseAttributeList(tk);
-
-            }
-        }
-
-        tk.setTokenIndex(tk.getCurrent_token_index()+1);
-
-    }
 
     //<AttributeList>   ::=  [AttributeName] | [AttributeName] "," <AttributeList>
     private void parseAttributeList(Tokenizer tk) throws Exception {
@@ -358,15 +393,6 @@ public class Parser {
         return attributeName;
     }
 
-    //[Digit]           ::=  "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-    private boolean parseDigit(String token) {
-        if(token.matches("[0-9]+")){
-            return true;
-        }
-        return false;
-    }
-
-
     private void parseAlterationType(String token) throws Exception {
 
         if(token.equalsIgnoreCase("ADD") || token.equalsIgnoreCase("DROP")){
@@ -396,35 +422,6 @@ public class Parser {
     }
 
 
-    // <Update>          ::=  "UPDATE " [TableName] " SET " <NameValueList> " WHERE " <Condition>
-    public boolean parseUpdate(Tokenizer tk) throws Exception {
-
-        if(!tk.hasMoreTokens()){
-            throw new Exception("Parse Failed - parseUpdate");
-        }
-
-        parseTableName(tk);
-
-
-        // Match "SET" token
-        if (!tk.nextToken().equalsIgnoreCase("set")) {
-            throw new Exception("Parse Failed - parseUpdate");
-        }
-
-        // Match <NameValueList> rule
-        parseNameValueList(tk);
-
-        // Match "WHERE" token
-        if (!tk.nextToken().equalsIgnoreCase("where")) {
-            throw new Exception("Parse Failed - parseUpdate");
-        }
-
-        // Match <Condition> rule
-        dbstate.conditions = new ArrayList<Condition>();
-        dbstate.conditions.add(parseCondition(tk));
-
-        return true;
-    }
 
     private Condition parseCondition(Tokenizer tk) throws Exception {
         Condition result = null;
@@ -451,7 +448,12 @@ public class Parser {
                 tk.setTokenIndex(tk.getCurrent_token_index() - 1);
                 String attributeName = parseAttributeName(tk);
                 tk.setTokenIndex(tk.getCurrent_token_index() + 1);
-                String comparator = parseComparator(tk.getCurrentToken());
+                String comparator = parseComparator(tk.nextToken());
+
+                if(tk.nextToken().equals("'")){
+                    tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                }
+
                 String value = parseValueLiteral(tk);
 
                 Condition condition = new Condition();
@@ -515,7 +517,6 @@ public class Parser {
             throw new Exception("Parsed Fail - parseNameValueList");
         }
 
-        dbstate.nameValueList = new ArrayList<NameValue>();
         dbstate.nameValueList.add(parseNameValuePair(tk));
 
         // Check if there are more NameValuePairs
@@ -550,8 +551,7 @@ public class Parser {
             throw new Exception("Parse Failed - ParseNameValuePair");
         }
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+ 1);
-
+        tk.setTokenIndex(tk.getCurrent_token_index()+1);
         nameVal.Value.add(parseValueLiteral(tk));
 
         return nameVal;
@@ -618,7 +618,7 @@ public class Parser {
 
         String subIntegerLiteral = "";
 
-        subIntegerLiteral = parseDigitSequence(tk.nextToken());
+        subIntegerLiteral = parseDigitSequence(tk.getCurrentToken());
 
         if (subIntegerLiteral != null) {
             integerLiteral += subIntegerLiteral;
