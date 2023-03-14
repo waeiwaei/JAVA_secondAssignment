@@ -8,541 +8,354 @@ import java.util.ArrayList;
 
 public class Parser {
 
-    ArrayList<String> tokens;
-    public int current_token_index;
+    private DBCmd dbstate;
 
-    static String fileSeparator = File.separator;
-
-    private int numberAttributes;
-
-    static String currentDatabase = "testing";
-
-    public Parser(ArrayList<String> token, Integer current_token_index){
-        this.tokens = token;
-        this.current_token_index = current_token_index;
+    public Parser(){
+        dbstate = new DBCmd();
     }
 
-    public boolean parse() throws Exception {
-        if(parseCommand()){
-            System.out.print("Parsed Okay");
-            return true;
-        }else{
-            System.out.print("Parse Fail");
-        }
-        return false;
+    public DBCmd parse(Tokenizer tk) throws Exception {
+        parseCommand(tk);
+        return dbstate;
     }
 
 
     //<Command>         ::=  <CommandType> ";"
-    private boolean parseCommand() throws Exception {
+    private void parseCommand(Tokenizer tk) throws Exception {
         // Try to match <CommandType> rule
-        if (!parseCommandType()) {
-            return false;
-        }
+        parseCommandType(tk);
+
+        String token = tk.getCurrentToken();
 
         // Match ";" token
-        if(!tokens.get(current_token_index).equals(";")){
-            return false;
+        if(!token.equals(";")){
+            throw new Exception("Parse failed! - parseCommand");
         }
-
-        return true;
     }
 
     //<CommandType>     ::=  <Use> | <Create> | <Drop> | <Alter> | <Insert> | <Select> | <Update> | <Delete> | <Join>
-    public boolean parseCommandType() throws Exception{
+    public void parseCommandType(Tokenizer tk) throws Exception{
 
-        boolean parse = false;
-
-        switch(tokens.get(current_token_index).toLowerCase()){
+        switch(tk.nextToken().toLowerCase()){
             case "create":
-                current_token_index++;
-                if(parseCreate()){
-                    parse = true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseCreate(tk);
                 break;
 
             case "update":
-                current_token_index++;
-                if(parseUpdate()){
-                    parse = true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseUpdate(tk);
                 break;
 
             case "select":
-                current_token_index++;
-                if(parseSelect()){
-                    parse = true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseSelect(tk);
                 break;
 
             case "alter":
-                current_token_index++;
-                if(parseAlteration()){
-                    parse= true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseAlteration(tk);
                 break;
 
             case "insert":
-                current_token_index++;
-                if(parseInsert()){
-                    parse= true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseInsert(tk);
                 break;
 
             case "join":
-                current_token_index++;
-                if(parseJoin()){
-                    parse=true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseJoin(tk);
                 break;
 
             case "drop":
-                current_token_index++;
-                if(parseDrop()){
-                    parse=true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseDrop(tk);
                 break;
 
             case "use":
-                current_token_index++;
-                if(parseUse()){
-                    parse=true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseUse(tk);
                 break;
 
             case "delete":
-                current_token_index++;
-                if(parseDelete()) {
-                    parse=true;
-                }
+                dbstate.commandtype = tk.getCurrentToken();
+                parseDelete(tk);
                 break;
+
             default:
-                throw new Exception("Invalid command typed :" + tokens.get(current_token_index));
+                throw new Exception("Invalid command typed :" + tk.nextToken());
         }
 
-        if(parse == true){
-            return true;
-        }
-
-        return false;
     }
 
-    private boolean parseInsert() {
+    private void parseInsert(Tokenizer tk) throws Exception{
 
-        if(!tokens.get(current_token_index).equalsIgnoreCase("Into")){
-            return false;
+        if(!tk.nextToken().equalsIgnoreCase("Into")){
+            throw new Exception("Parser Fail - parseInsert");
         }
 
-        current_token_index++;
+        parseTableName(tk);
 
-        if(!parseTableName()){
-            return false;
+        if(!tk.nextToken().equalsIgnoreCase("Values")){
+            throw new Exception("Parser Fail - parseInsert");
         }
 
-        current_token_index++;
 
-        if(!tokens.get(current_token_index).equalsIgnoreCase("Values")){
-            return false;
+        if(tk.nextToken().equals("(")){
+            dbstate.values = new ArrayList<String>();
+            parseValueList(tk);
         }
 
-        current_token_index++;
-
-
-        if(tokens.get(current_token_index).equalsIgnoreCase("(")){
-            current_token_index++;
-            if(!parseValueList()){
-                return false;
-            }
-
-            if(tokens.get(current_token_index).equalsIgnoreCase(")")){
-                current_token_index++;
-            }
+        if(!tk.getCurrentToken().equalsIgnoreCase(")")){
+            throw new Exception("Parser Fail - parseInsert");
         }
 
-        return true;
+        tk.setTokenIndex(tk.getCurrent_token_index()+1);
+
     }
 
 
 
-    private boolean parseValueList() {
+    private void parseValueList(Tokenizer tk) throws Exception{
         // Check if there is at least one Value
-        if (!parseValueLiteral()) {
-            return false;
-        }
+        dbstate.values.add(parseValueLiteral(tk));
 
-        // Check if there are additional Values separated by commas
-        while (tokens.get(current_token_index).equals(",")) {
-            // Consume the comma token
-            current_token_index++;
-
-            // Check if there is another Value after the comma
-            if (!parseValueLiteral()) {
-                return false;
+        if(tk.nextToken().equals(",")){
+            if(tk.getCurrentToken().equals(")")){
+                return;
             }
+            tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            parseValueList(tk);
+
         }
 
-        // If we reached here, the ValueList is valid
-        return true;
     }
 
 
-    private boolean parseDelete() {
+    private void parseDelete(Tokenizer tk) throws Exception {
 
-        if(!tokens.get(current_token_index).equalsIgnoreCase("From")){
-            return false;
+        if(!tk.nextToken().equalsIgnoreCase("From")){
+            throw new Exception("Parse Failed - parseDelete");
         }
 
-        current_token_index++;
+        parseTableName(tk);
 
-        if(!parseTableName()){
-            return false;
+        if(!tk.nextToken().equalsIgnoreCase("Where")){
+            throw new Exception("Parse Failed - parseDelete");
         }
 
-        current_token_index++;
+        dbstate.conditions = new ArrayList<Condition>();
+        dbstate.conditions.add(parseCondition(tk));
 
-        if(!tokens.get(current_token_index).equalsIgnoreCase("Where")){
-            return false;
-        }
-
-        current_token_index++;
-
-        if(!parseCondition()){
-            return false;
-        }
-
-        return true;
     }
 
-    private boolean parseUse() {
+    private void parseUse(Tokenizer tk) throws Exception {
 
-        if(parseDatabaseName()){
-
-            /*INTERPRETER--------------------------*/
-            currentDatabase = tokens.get(current_token_index);
-            current_token_index++;
-            /*-------------------------------------*/
-            return true;
-        }
-
-        return false;
+        parseDatabaseName(tk);
+        tk.setTokenIndex(tk.getCurrent_token_index() + 1);
 
     }
 
     //<Drop>            ::=  "DROP DATABASE " [DatabaseName] | "DROP TABLE " [TableName]
-    private boolean parseDrop() {
+    private void parseDrop(Tokenizer tk) throws Exception {
 
-        if(tokens.get(current_token_index).equalsIgnoreCase("database")){
-            current_token_index++;
-            if(parseDatabaseName()){
-                current_token_index++;
-                if (tokens.get(current_token_index).equals(";")) {
-                    return true;
-                }
-            }
-        }else if(tokens.get(current_token_index).equalsIgnoreCase("table")){
-            current_token_index++;
-            if(parseTableName()){
-                current_token_index++;
-                if (tokens.get(current_token_index).equals(";")) {
-                    return true;
-                }
-            }
+        String token = tk.nextToken();
+
+        if(token.equalsIgnoreCase("database")){
+            dbstate.commandtype +=" " + tk.getCurrentToken();
+            parseDatabaseName(tk);
+
+        }else if(token.equalsIgnoreCase("table")){
+            dbstate.commandtype += " " + tk.getCurrentToken();
+            parseTableName(tk);
+
         }
 
-        return false;
+        tk.setTokenIndex(tk.getCurrent_token_index()+1);
     }
 
     //<Join>            ::=  "JOIN " [TableName] " AND " [TableName] " ON " [AttributeName] " AND " [AttributeName]
-    private boolean parseJoin() {
+    private void parseJoin(Tokenizer tk) throws Exception {
 
-        if(!parseTableName()){
-            return false;
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse Failed - parseJoin");
         }
 
-        current_token_index++;
+        dbstate.join = new ArrayList<Join>();
 
-        if (!tokens.get(current_token_index).equals("AND")){
-            return false;
+        parseTableName(tk);
+
+        dbstate.join.add(new Join(dbstate.TableNames.get(0)));
+
+
+        if (!tk.nextToken().equalsIgnoreCase("AND")){
+            throw new Exception("Parse Failed - parseJoin");
         }
 
-        current_token_index++;
+        parseTableName(tk);
 
-        if (!parseTableName()){
-            return false;
+        dbstate.join.add(new Join(dbstate.TableNames.get(0)));
+
+
+        if (!tk.nextToken().equalsIgnoreCase("ON")){
+            throw new Exception("Parse Failed - parseJoin");
         }
 
-        current_token_index++;
+        //table 1
+        dbstate.join.get(0).attributes = parseAttributeName(tk);
 
-        if (!tokens.get(current_token_index).equals("ON")){
-            return false;
+        tk.setTokenIndex(tk.getCurrent_token_index()+1);
+
+        if (!tk.nextToken().equalsIgnoreCase("AND")){
+            throw new Exception("Parse Failed - parseJoin");
         }
 
-        current_token_index++;
+        //table 2
+        dbstate.join.get(1).attributes = parseAttributeName(tk);
 
-        if(parseAttributeName() == null){
-            return false;
-        }
+        tk.setTokenIndex(tk.getCurrent_token_index()+2);
 
-        if (!tokens.get(current_token_index).equals("AND")){
-            return false;
-        }
-
-        current_token_index++;
-
-        if(parseAttributeName() == null){
-            return false;
-        }
-
-        // Check for semicolon at the end
-        if (tokens.get(current_token_index).equals(";")) {
-            return true;
-        }
-
-
-        return false;
     }
 
     //<Alter>           ::=  "ALTER TABLE " [TableName] " " [AlterationType] " " [AttributeName]
-    private boolean parseAlteration() throws IOException {
-        String val;
-        if (!tokens.get(current_token_index).equalsIgnoreCase("TABLE")) {
-            return false;
-        }
-        current_token_index++;
+    private void parseAlteration(Tokenizer tk) throws Exception {
 
-        if (!parseTableName()) {
-            return false;
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse Failed - parseAlteration");
         }
 
-        current_token_index++;
-
-        if (!parseAlterationType(tokens.get(current_token_index))) {
-            return false;
+        if (!tk.nextToken().equalsIgnoreCase("TABLE")) {
+            throw new Exception("Parse Failed - parseAlteration");
         }
 
-        current_token_index++;
-        val = parseAttributeName();
+        parseTableName(tk);
+        parseAlterationType(tk.nextToken());
 
-        if (val  == null) {
-            return false;
-        }
 
-        // Check for semicolon at the end
-        if (tokens.get(current_token_index).equals(";")) {
-            return true;
-        }
+        dbstate.colNames = new ArrayList<String>();
+        dbstate.colNames.add(parseAttributeName(tk));
 
-        return false;
+        tk.setTokenIndex(tk.getCurrent_token_index()+2);
+
     }
 
-    private boolean parseSelect() {
+    private void parseSelect(Tokenizer tk) throws Exception {
 
-        ArrayList<String> attributes = parseWildAttributes();
-        if (attributes == null) {
-            return false;
+        parseWildAttributes(tk);
+
+        if (!tk.nextToken().equalsIgnoreCase("From")) {
+            throw new Exception("Parse Failed - parseSelect");
         }
 
-        if (!tokens.get(current_token_index).equals("FROM")) {
-            return false;
-        }
-        current_token_index++;
+        parseTableName(tk);
 
-        if (!parseTableName()) {
-            return false;
+        if(tk.nextToken().equals(";")){
+            return;
         }
 
-        current_token_index++;
+        if (tk.getCurrentToken().equalsIgnoreCase("Where")) {
+            dbstate.conditions = new ArrayList<Condition>();
+            dbstate.conditions.add(parseCondition(tk));
 
-        if (tokens.size() > current_token_index && tokens.get(current_token_index).equals("WHERE")) {
-            // optional WHERE clause
-            current_token_index++;
-            return parseCondition();
+        } else{
+            throw new Exception("Parse Failed - parseSelect");
         }
 
-        if(tokens.get(current_token_index).equals(";")){
-            return true;
-        }
 
-        return false;
+        return;
     }
 
 
 
-    private ArrayList<String> parseWildAttributes() {
-        if (tokens.get(current_token_index).equals("*")) {
+    private void parseWildAttributes(Tokenizer tk) throws Exception {
+        dbstate.colNames = new ArrayList<String>();
+
+        if (tk.nextToken().equals("*")) {
             // consume the "*" token
-            current_token_index++;
-            ArrayList<String> attributes = new ArrayList<>();
-            attributes.add("*");
-            return attributes;
+            dbstate.colNames.add("*");
+
         } else {
-            return parseAttributeList();
+            parseAttributeList(tk);
         }
     }
 
 
     //<Create>          ::=  <CreateDatabase> | <CreateTable>
-    private boolean parseCreate() throws IOException {
+    private void parseCreate(Tokenizer tk) throws Exception {
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse failed - Create");
+        }
+
+        String token = tk.nextToken();
 
         // <CreateDatabase>  ::=  "CREATE DATABASE " [DatabaseName]
-        if (tokens.get(current_token_index).equalsIgnoreCase("database")) {
-            current_token_index++;
-            if(parseDatabaseName()){
+        if (token.equalsIgnoreCase("database")) {
+            dbstate.commandtype += " " + tk.getCurrentToken();
+            parseDatabaseName(tk);
 
-                /*INTERPRETER-----------------------------------------------------------------------------------------*/
-                File database_create=new File(".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator+tokens.get(current_token_index));
+           // <CreateTable>     ::=  "CREATE TABLE " [TableName] | "CREATE TABLE " [TableName] "(" <AttributeList> ")"
+        } else if (token.equalsIgnoreCase("table")) {
+            dbstate.commandtype += " " + tk.getCurrentToken();
 
-                if(!database_create.exists()){
-                    database_create.mkdir();
-                }else{
-                    System.out.println("Database is already created");
-                }
+            parseTableName(tk);
 
-                current_token_index++;
-                if(tokens.get(current_token_index).equals(";")){
-                    return true;
-                }
-            }
-            /*--------------------------------------------------------------------------------------------------------*/
+            if (tk.contains("(")) {
 
-
-
-
-            // <CreateTable>     ::=  "CREATE TABLE " [TableName] | "CREATE TABLE " [TableName] "(" <AttributeList> ")"
-        } else if (tokens.get(current_token_index).equalsIgnoreCase("table")) {
-            current_token_index++;
-
-            /*INTERPRETER-----------------------------------------------------------------------------------------*/
-
-            FileWriter createTable = null;
-
-            /*----------------------------------------------------------------------------------------------------*/
-
-
-            if (!parseTableName()) {
-                return false;
-            }
-
-            /*INTERPRETER-----------------------------------------------------------------------------------------*/
-
-            createTable = new FileWriter(".." + fileSeparator + "cw-db" + fileSeparator + "databases" + fileSeparator + currentDatabase + fileSeparator + tokens.get(current_token_index)+".tab");
-            BufferedWriter bw = new BufferedWriter(createTable);
-
-            /*----------------------------------------------------------------------------------------------------*/
-
-            if (tokens.contains("(")) {
-                current_token_index = tokens.indexOf("(") + 1;  // identify first attribute
-                int endIndex = tokens.indexOf(")");
-
+                dbstate.colNames = new ArrayList<String>();
                 // Parse the attribute list
-                ArrayList<String> attributes = parseAttributeList();
-
-                // Print the attributes
-                if (attributes.isEmpty() != true) {
-                    System.out.println("Attributes:");
-                    for (String attribute : attributes) {
-                        System.out.println(attribute);
-                    }
-                    current_token_index++;
-                } else {
-                    System.out.println("No attributes were found");
-                }
-
-                /*INTERPRETER---------------------------------------------------------------------------------------------*/
-
-                if(attributes.size() > 0){
-
-                    bw.write("id");
-                    bw.write("\t");
-
-
-                    for(int i = 0; i < attributes.size(); i++){
-                        bw.write(attributes.get(i));
-                        bw.write("\t");
-                    }
-
-                }
-                /*--------------------------------------------------------------------------------------------------------*/
+                parseAttributeList(tk);
 
             }
-
-            bw.close();
-
         }
 
+        tk.setTokenIndex(tk.getCurrent_token_index()+1);
 
-
-        if(tokens.contains("(") == false){
-            current_token_index++;
-        }
-
-        if(tokens.get(current_token_index).equals(";")){
-            return true;
-        }
-
-        return false;
     }
 
     //<AttributeList>   ::=  [AttributeName] | [AttributeName] "," <AttributeList>
-    private ArrayList<String> parseAttributeList() {
-        ArrayList<String> attributes = new ArrayList<>();
+    private void parseAttributeList(Tokenizer tk) throws Exception {
 
-        while (current_token_index < tokens.indexOf(")")) {
-            String attributeName = parseAttributeName();
-            if (attributeName == null) {
-                return null;
-            }
-            attributes.add(attributeName);
+        String x = tk.nextToken();
+        if(x.equals(")")){return;}
 
-            // Check if there are more attributes to parse
-            if (current_token_index < tokens.indexOf(")") && tokens.get(current_token_index).equals(",")) {
-                current_token_index++;
-                ArrayList<String> remainingAttributes = parseAttributeList();
-                if (remainingAttributes == null) {
-                    return null;
-                }
-                attributes.addAll(remainingAttributes);
-                break;
-            }
+        if(x.equals("(") || x.equals(",")){
+            String attributeName = parseAttributeName(tk);
+            dbstate.colNames.add(attributeName);
+
+        } else {
+            throw new Exception("Parse failed! - parseAttributeList");
         }
 
-        numberAttributes = attributes.size();
-
-        return attributes;
+        parseAttributeList(tk);
     }
 
 
     // [AttributeName]   ::=  [PlainText] | [TableName] "." [PlainText]
-    private  String parseAttributeName() {
+    private String parseAttributeName(Tokenizer tk)throws Exception {
         String attributeName = "";
 
         // Check if the attribute name is a plain text or a table name and plain text
-        if (parsePlainText(tokens.get(current_token_index))) {
-            attributeName += tokens.get(current_token_index);
-            current_token_index++;
-            if (current_token_index < tokens.indexOf(")") && tokens.get(current_token_index).equals(".")) {
-                attributeName += ".";
-                current_token_index++;
-                if (current_token_index >= tokens.indexOf(")") || !parsePlainText(tokens.get(current_token_index))) {
-                    return null;
-                }
-                attributeName += tokens.get(current_token_index);
-                //current_token_index++;
-            }
-        } else {
-            return null;
+        String x = tk.nextToken();
+        x = parsePlainText(x);
+        attributeName += x;
+
+
+        int current_token_index = tk.getCurrent_token_index();
+        if (current_token_index < tk.indexOf(")") && tk.nextToken().equals(".")) {
+            attributeName += ".";
+
+            if(!tk.hasMoreTokens())
+                throw new Exception("Parse failed!");
+
+            if(current_token_index >= tk.indexOf(")"))
+                attributeName+=parsePlainText(tk.nextToken());
+
+        }else{
+            tk.setTokenIndex(tk.getCurrent_token_index() - 1);
         }
 
         return attributeName;
-    }
-
-
-    //[Space]           ::=  " "
-    private boolean parseSpace(String token) {
-        if(token.equals(" ")){
-            return true;
-        }
-        return false;
     }
 
     //[Digit]           ::=  "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
@@ -553,163 +366,209 @@ public class Parser {
         return false;
     }
 
-    //[Symbol]          ::=  "!" | "#" | "$" | "%" | "&" | "(" | ")" | "*" | "+" | "," | "-" | "." | "/" | ":" | ";" | ">" | "=" | "<" | "?" | "@" | "[" | "\" | "]" | "^" | "_" | "`" | "{" | "}" | "~"
-    private boolean parseSymbol(String token) {
-        String regex = "[!#$%&()*+,-./:;>=<?@\\[\\]\\^_`\\{\\}|~]*";
-        return token.matches(regex);
-    }
 
-    //[Uppercase]       ::=  "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
-    private boolean parseUppercase(String token) {
-        return token.matches("[A-Z]");
-    }
+    private void parseAlterationType(String token) throws Exception {
 
-    //[Lowercase]       ::=  "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
-    private boolean parseLowercase(String token) {
-        return token.matches("[a-z]");
-    }
-
-    //[Letter]          ::=  [Uppercase] | [Lowercase]
-    private boolean parseLetter(String token) {
-        return parseUppercase(token) || parseLowercase(token);
-    }
-
-    private static boolean parseAlterationType(String token) {
-        if(token.equalsIgnoreCase("ADD") ||token.equalsIgnoreCase("DROP")){
-            return true;
+        if(token.equalsIgnoreCase("ADD") || token.equalsIgnoreCase("DROP")){
+            dbstate.alterationType = new String();
+            dbstate.alterationType = token;
+        }else{
+            throw new Exception("Parse Failed - parseAlterationType");
         }
 
-        return false;
     }
 
     //[PlainText]       ::=  [Letter] | [Digit] | [PlainText] [Letter] | [PlainText] [Digit]
-    private boolean parsePlainText(String token) {
+    private String parsePlainText(String token) throws Exception {
 
         if (token == null) {
-            return false;
+            throw new Exception("Parser Failed - parsePlainText");
         }
-        if (token.length() == 1) {
-            return parseLetter(token) || parseDigit(token);
-        }
+
         for (int i = 0; i < token.length(); i++) {
             char c = token.charAt(i);
-            if (!parseLetter(Character.toString(c)) && !parseDigit(Character.toString(c))) {
-                return false;
+            if (!Character.isLetter(c) && !Character.isDigit(c)) {
+                throw new Exception("Parse failed!");
             }
         }
 
-        return true;
+        return token;
     }
 
 
     // <Update>          ::=  "UPDATE " [TableName] " SET " <NameValueList> " WHERE " <Condition>
-    public boolean parseUpdate() throws Exception {
-        // Match [TableName] rule
-        if (!parseTableName()) {
-            return false;
+    public boolean parseUpdate(Tokenizer tk) throws Exception {
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse Failed - parseUpdate");
         }
 
-        current_token_index++;
+        parseTableName(tk);
+
 
         // Match "SET" token
-        if (!tokens.get(current_token_index).equalsIgnoreCase("set")) {
-            return false;
+        if (!tk.nextToken().equalsIgnoreCase("set")) {
+            throw new Exception("Parse Failed - parseUpdate");
         }
-        current_token_index++;
 
         // Match <NameValueList> rule
-        if (!parseNameValueList()) {
-            return false;
-        }
+        parseNameValueList(tk);
 
         // Match "WHERE" token
-        if (!tokens.get(current_token_index).equalsIgnoreCase("where")) {
-            return false;
+        if (!tk.nextToken().equalsIgnoreCase("where")) {
+            throw new Exception("Parse Failed - parseUpdate");
         }
-        current_token_index++;
 
         // Match <Condition> rule
-        if (!parseCondition()) {
-            return false;
-        }
-
-        // Match ";" token
-        if (!tokens.get(current_token_index).equals(";")) {
-            return false;
-        }
+        dbstate.conditions = new ArrayList<Condition>();
+        dbstate.conditions.add(parseCondition(tk));
 
         return true;
     }
 
+    //DO IT LAST
     //<Condition>       ::=  "(" <Condition> [BoolOperator] <Condition> ")" | <Condition> [BoolOperator] <Condition> | "(" [AttributeName] [Comparator] [Value] ")" | [AttributeName] [Comparator] [Value]
-    private boolean parseCondition() {
-        if (tokens.get(current_token_index).equals("(")) {
-            // Condition enclosed in parentheses with nested conditions and boolean operators
-            current_token_index++;
-            boolean left_condition_valid = parseCondition();
-            if (!left_condition_valid) {
-                return false;
+/*    private Condition parseCondition(Tokenizer tk) throws Exception {
+        if (tk.hasMoreTokens()) {
+            String token = tk.nextToken();
+            if (token.equals("(")) {
+                // parse sub-expression
+                Condition leftCondition = parseCondition(tk);
+                String boolOperator = parseBoolOperator(tk.nextToken());
+                Condition rightCondition = parseCondition(tk);
+                if (!tk.nextToken().equals(")")) {
+                    throw new Exception("Parse Failed - parseCondition: invalid syntax");
+                }
+                // combine sub-expressions
+                Condition condition = new Condition();
+                condition.cnd1 = leftCondition;
+                condition.cnd2 = rightCondition;
+                condition.boolOperator = boolOperator;
+                return condition;
+            } else {
+                String attributeName = parseAttributeName(tk);
+                String comparator = parseComparator(tk.nextToken());
+                String value = parseValueLiteral(tk);
+
+                Condition condition = new Condition();
+                condition.attributeName = attributeName;
+                condition.comparator = comparator;
+                condition.value = value;
+
+                if (tk.hasMoreTokens()) {
+                    String boolOperator = parseBoolOperator(tk.nextToken());
+                    // recursively parse and combine expressions
+                    Condition nextCondition = parseCondition(tk);
+                    Condition combinedCondition = new Condition();
+                    combinedCondition.cnd1 = condition;
+                    combinedCondition.boolOperator = boolOperator;
+                    combinedCondition.cnd2 = nextCondition;
+                    return combinedCondition;
+                }
+                return condition;
             }
-            String bool_operator = tokens.get(current_token_index);
-            if (!parseBoolOperator(bool_operator)) {
-                return false;
+        }
+        return null;
+    }*/
+
+    private Condition parseCondition(Tokenizer tk) throws Exception {
+        Condition result = null;
+
+        if (tk.hasMoreTokens()) {
+            String token = tk.nextToken();
+            if (token.equals("(")) {
+                // parse sub-expression
+                Condition leftCondition = parseCondition(tk);
+                String boolOperator = parseBoolOperator(tk.nextToken());
+                Condition rightCondition = parseCondition(tk);
+                if (!tk.nextToken().equals(")")) {
+                    throw new Exception("Parse Failed - parseCondition: invalid syntax");
+                }
+                // combine sub-expressions
+                Condition condition = new Condition();
+                condition.cnd1 = leftCondition;
+                condition.cnd2 = rightCondition;
+                condition.boolOperator = boolOperator;
+                result = condition;
+            } else {
+                tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                String attributeName = parseAttributeName(tk);
+                tk.setTokenIndex(tk.getCurrent_token_index() + 1);
+                String comparator = parseComparator(tk.nextToken());
+                tk.setTokenIndex(tk.getCurrent_token_index() + 1);
+                String value = parseValueLiteral(tk);
+
+                Condition condition = new Condition();
+                condition.attributeName = attributeName;
+                condition.comparator = comparator;
+                condition.value = value;
+
+                if (tk.hasMoreTokens()) {
+                    String boolOperator = parseBoolOperator(tk.nextToken());
+
+                    if(boolOperator.isEmpty()){
+                        result = condition;
+                        return result;
+                    }
+
+                    Condition nextCondition = parseCondition(tk);
+
+                    // combine expressions
+                    Condition combinedCondition = new Condition();
+                    combinedCondition.cnd1 = condition;
+                    combinedCondition.cnd2 = nextCondition;
+                    combinedCondition.boolOperator = boolOperator;
+
+                    result = combinedCondition;
+                } else {
+                    result = condition;
+                }
             }
-            current_token_index++;
-            boolean right_condition_valid = parseCondition();
-            if (!right_condition_valid) {
-                return false;
-            }
-            if (!tokens.get(current_token_index).equals(")")) {
-                return false;
-            }
-            current_token_index++;
-            return true;
-        } else if (parseAttributeName() != null) {
-            // Condition with attribute name, comparator, and value
-            if (!parseComparator(tokens.get(current_token_index))) {
-                return false;
-            }
-            current_token_index++;
-            if (!parseValueLiteral()) {
-                return false;
-            }
-            return true;
+        }
+
+        if (result != null && !tk.hasMoreTokens() && tk.getCurrentToken().equals(";")) {
+            return result;
         } else {
-            return false;
+            throw new Exception("Parse Failed - parseCondition: invalid syntax");
         }
     }
 
 
-    private boolean parseComparator(String token){
+    private String parseComparator(String token) throws Exception{
         if(token.equalsIgnoreCase("==") || token.equalsIgnoreCase("!=")|| token.equalsIgnoreCase(">")|| token.equalsIgnoreCase("<")|| token.equalsIgnoreCase("<=")|| token.equalsIgnoreCase(">=")|| token.equalsIgnoreCase("LIKE")){
-            return true;
+            return token;
+        }else{
+            throw new Exception("Parse failed - parseComparator");
         }
-        return false;
     }
 
-    private boolean parseBoolOperator(String token){
+    private String parseBoolOperator(String token) throws Exception{
         if(token.equalsIgnoreCase("AND") || token.equalsIgnoreCase("OR")){
-            return true;
+            return token;
+        }else{
+            return "";
         }
-        return false;
     }
 
 
     //<NameValueList>   ::=  <NameValuePair> | <NameValuePair> "," <NameValueList>
-    private boolean parseNameValueList() {
+    private boolean parseNameValueList(Tokenizer tk) throws Exception {
+
         // Parse the first NameValuePair
-        if (!parseNameValuePair()) {
-            return false;
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parsed Fail - parseNameValueList");
         }
 
-        //current_token_index++;
+        dbstate.nameValueList = new ArrayList<NameValue>();
+        dbstate.nameValueList.add(parseNameValuePair(tk));
+
         // Check if there are more NameValuePairs
-        if (tokens.get(current_token_index).equals(",")) {
-            // Parse the comma separator
-            current_token_index++;
+        if (tk.nextToken().equals(",")) {
 
             // Parse the remaining NameValuePairs recursively
-            return parseNameValueList();
+            return parseNameValueList(tk);
+        }else{
+            tk.setTokenIndex(tk.getCurrent_token_index()-1);
         }
 
         // If there are no more NameValuePairs, the NameValueList is valid
@@ -717,167 +576,197 @@ public class Parser {
     }
 
     //<NameValuePair>   ::=  [AttributeName] "=" [Value]
-    private boolean parseNameValuePair() {
+    private NameValue parseNameValuePair(Tokenizer tk) throws Exception {
 
-        if(parseAttributeName().isEmpty()){
-            return false;
+        NameValue nameVal = new NameValue();
+        nameVal.Name = new ArrayList<String>();
+        nameVal.Value = new ArrayList<String>();
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse Failed - ParseNameValuePair");
         }
 
-        if(!tokens.get(current_token_index).equals("=")){
-            return false;
+        nameVal.Name.add(parseAttributeName(tk));
+
+        tk.setTokenIndex(tk.getCurrent_token_index()+ 1);
+
+        if(!tk.nextToken().equals("=")){
+            throw new Exception("Parse Failed - ParseNameValuePair");
         }
 
-        current_token_index++;
+        tk.setTokenIndex(tk.getCurrent_token_index()+ 1);
 
-        if(parseValueLiteral()){
-            return true;
-        }
+        nameVal.Value.add(parseValueLiteral(tk));
 
-        return false;
+        return nameVal;
     }
 
     // [Value]           ::=  "'" [StringLiteral] "'" | [BooleanLiteral] | [FloatLiteral] | [IntegerLiteral] | "NULL"
-    private boolean parseValueLiteral() {
-        String current_token = tokens.get(current_token_index);
+    private String parseValueLiteral(Tokenizer tk) throws Exception {
 
-        if (current_token.equals("NULL")) {
-            // If the current token is "NULL", the value literal is valid
-            return true;
-        }
+        int currentTokenIndex = tk.getCurrent_token_index();
+        String current_token = "";
 
-        if (current_token.equals("'")) {
-            // If the current token is a single quote, it's the start of a string literal
-            current_token_index++;
+        if (tk.nextToken().equals("'")) {
 
-            if(tokens.get(current_token_index).equals("'")){
-                //System.out.print("Parse Val literal "+ current_token_index);
-                return true;
+            if(tk.nextToken().equals("'")){
+                current_token = "''";
+                return current_token;
             }
 
-            current_token_index++;
+            current_token = tk.getCurrentToken();
 
-            if(tokens.get(current_token_index).equals("'")) {
-                // If the string literal is valid and we've reached the end single quote, the value literal is valid
-                current_token_index++;
-                return true;
+            if(!tk.nextToken().equals("'")) {
+                throw new Exception("Parse Failed - parseValueLiteral");
             }
+
+            return current_token;
+        }else{
+            tk.setTokenIndex(currentTokenIndex);
         }
 
-        if(parseBooleanLiteral()){
-            return true;
+        current_token = parseBooleanLiteral(tk.getCurrentToken());
+
+        if(!current_token.isEmpty()){
+            return current_token;
         }
 
-        if(parseFloatLiteral()){
-            return true;
+        current_token = parseFloatLiteral(tk);
+
+        if(!current_token.isEmpty()){
+            return current_token;
         }
 
-        if(parseIntegerLiteral()){
-            current_token_index++;
-            return true;
+        current_token = parseIntegerLiteral(tk);
+        if(!current_token.isEmpty()){
+            return current_token;
         }
 
-
-        // If we didn't return true above, the value literal is not valid
-        return false;
+        return current_token;
     }
 
     //[IntegerLiteral]  ::=  [DigitSequence] | "-" [DigitSequence] | "+" [DigitSequence]
-    private boolean parseIntegerLiteral() {
-        int initialIndex = current_token_index;
-        if (current_token_index < tokens.size() && (tokens.get(current_token_index).equals("+") || tokens.get(current_token_index).equals("-"))) {
-            current_token_index++;
+    private String parseIntegerLiteral(Tokenizer tk) throws Exception {
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parsed Fail - parseFloatLiteral");
         }
-        if (current_token_index < tokens.size() && parseDigitSequence()) {
-            current_token_index = initialIndex;
-            return true;
+
+        String integerLiteral = "";
+
+        //int initialIndex = current_token_index;
+        if ((tk.getCurrentToken().equals("+") || tk.getCurrentToken().equals("-"))) {
+            integerLiteral += tk.getCurrentToken();
+            tk.setTokenIndex(tk.getCurrent_token_index()+1);
         }
-        current_token_index = initialIndex;
-        return false;
+
+        String subIntegerLiteral = "";
+
+        subIntegerLiteral = parseDigitSequence(tk.getCurrentToken());
+
+        if (subIntegerLiteral != null) {
+            integerLiteral += subIntegerLiteral;
+            return integerLiteral;
+
+        }else{
+            integerLiteral = "";
+            return integerLiteral;
+        }
+
     }
 
     // [FloatLiteral]    ::=  [DigitSequence] "." [DigitSequence] | "-" [DigitSequence] "." [DigitSequence] | "+" [DigitSequence] "." [DigitSequence]
-    private boolean parseFloatLiteral() {
-        int initialIndex = current_token_index;
-        if (current_token_index < tokens.size() && (tokens.get(current_token_index).equals("+") || tokens.get(current_token_index).equals("-"))) {
-            current_token_index++;
+    private String parseFloatLiteral(Tokenizer tk) throws Exception {
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parsed Fail - parseFloatLiteral");
         }
-        if (current_token_index < tokens.size() && parseDigitSequence()) {
-            if (current_token_index < tokens.size() && tokens.get(current_token_index).equals(".")) {
-                current_token_index++;
-                if (current_token_index < tokens.size() && parseDigitSequence()) {
-                    current_token_index--;
-                    return true;
+
+        String float_literal = "";
+        String subfloat_literal = "";
+
+        int initialIndex = tk.getCurrent_token_index();
+
+        if (tk.getCurrentToken().equals("+") || tk.getCurrentToken().equals("-")) {
+            float_literal += tk.getCurrentToken();
+            tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        }
+
+        String first = parseDigitSequence(tk.getCurrentToken());
+
+        if (first != null) {
+            subfloat_literal = first;
+
+            if (tk.nextToken().equals(".")) {
+                subfloat_literal += tk.getCurrentToken();
+
+                String second = parseDigitSequence(tk.nextToken());
+
+                if (second != null) {
+                    subfloat_literal += tk.getCurrentToken();
                 }
+
+            }else{
+                tk.setTokenIndex(initialIndex);
+                return "";
             }
+        }else{
+            return null;
         }
-        current_token_index = initialIndex;
-        return false;
+
+        float_literal += subfloat_literal;
+
+        //we set the index back to the initial index as before
+        //current_token_index = initialIndex;
+
+        return float_literal;
     }
 
     //[DigitSequence]   ::=  [Digit] | [Digit] [DigitSequence]
-    private boolean parseDigitSequence() {
-        if (parseDigit(tokens.get(current_token_index))) {
-            current_token_index++;
-            if (current_token_index < tokens.size() && parseDigitSequence()) {
-                return true;
-            }
-            return true;
+    private String parseDigitSequence(String token) {
+
+        try {
+            Integer integerValue = Integer.parseInt(token);
+            return token;
+        }catch(NumberFormatException e){
+            return "";
         }
-        return false;
+
     }
 
     //[BooleanLiteral]  ::=  "TRUE" | "FALSE"
-    private boolean parseBooleanLiteral() {
-        if(tokens.get(current_token_index).equalsIgnoreCase("TRUE") || tokens.get(current_token_index).equalsIgnoreCase("FALSE")){
-            return true;
+    private String parseBooleanLiteral(String token) throws Exception {
+
+        if(!token.equalsIgnoreCase("TRUE") || !token.equalsIgnoreCase("FALSE")){
+            return "";
         }
 
-        return false;
+        return token;
     }
 
     //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
 
 
-
-    //[CharLiteral]     ::=  [Space] | [Letter] | [Symbol] | [Digit]
-    private boolean parseCharLiteral() {
-
-        if(parseSpace(tokens.get(current_token_index))){
-            return true;
-        }
-
-        if(parseLetter(tokens.get(current_token_index))){
-            return true;
-        }
-
-        if(parseDigit(tokens.get(current_token_index))){
-            return true;
-        }
-
-        if(parseSymbol(tokens.get(current_token_index))){
-            return true;
-        }
-
-        return false;
-    }
-
-
     // [TableName] ::= [PlainText]
-    public boolean parseTableName() {
-        if (tokens.size() > current_token_index && parsePlainText(tokens.get(current_token_index))) {
-            return true;
+    public void parseTableName(Tokenizer tk) throws Exception{
+
+        if(!tk.hasMoreTokens()) {
+            throw new Exception("Parse failed!");
         }
-        return false;
+
+        String tblname = parsePlainText(tk.nextToken());
+        dbstate.TableNames = new ArrayList<String>();
+        dbstate.TableNames.add(tblname);
     }
 
     // [DatabaseName] ::= [PlainText]
-    public boolean parseDatabaseName() {
-        if (tokens.size() > current_token_index && parsePlainText(tokens.get(current_token_index))) {
-            return true;
+    public void parseDatabaseName(Tokenizer tk) throws Exception{
+
+        if(!tk.hasMoreTokens()){
+            throw new Exception("Parse failed - DatabaseName");
         }
-        return false;
+
+        dbstate.DBName= parsePlainText(tk.nextToken());
+
     }
-
-
-
 }

@@ -13,21 +13,21 @@ public class DBServer {
 
     private static final char END_OF_TRANSMISSION = 4;
     private String storageFolderPath;
-
     private static ArrayList<String> tokens;
-
     private static int current_token_index;
+    static String fileSeparator = File.separator;
+    static String currentDatabase;
+    static String secondDatabase;
+    static String currentTable;
+    static String secondaryTable;
+    static int numberOfColumns1;
 
-
-//    static String fileSeparator = File.separator;
-
-//    static String currentDatabase = "testing";
 
     public static void main(String args[]) throws Exception {
 
         //tokenize commands from user
-        String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
-        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";
+        //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
+        String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive' AND age == 23;";
         //String command = "DELETE FROM table1 WHERE age == 29;";
         //String command = "ALTER TABLE marks ADD percentage;";
         //String command = "SELECT * FROM marks;";
@@ -43,120 +43,17 @@ public class DBServer {
 
 
         Tokenizer tokenCommands = new Tokenizer(command);
+        Parser p = new Parser();
+        DBCmd value = p.parse(tokenCommands);
 
-        tokens = tokenCommands.tokenize();
-        System.out.println(tokens);
-
-        current_token_index = 0;
-
-        Parser p = new Parser(tokens, current_token_index);
-        p.parse();
-
-        //Parse tokens According to Grammar (BNF.txt)
-//        if(parseCommand()){
-//            System.out.println("Parsed okay");
-//        }else{
-//            System.out.println("Fail Parse");
-//        }
-
-//        Parser parser = new Parser(tokens, current_token_index);
-//        if(parser.parse() == true){
-//            System.out.println("Parsed OK");
-//        }else{
-//            System.out.println("Fail Parse");
-//        }
-
-
-        /*READ AND WRITE TO FILES IN THE RELATIVE FILE PATH*/
-//        String fileSeparator = File.separator;
-//        //example command to write to file
-//        //Structure to store tables
-//        ArrayList <ArrayList<String>> tables = new ArrayList<ArrayList<String>>();
-//        String command = "CREATE TABLE marks (name, mark, pass);";
-//
-//        //store individual tokens in String object array
-//        String[] token;
-//        token = command.split("\s");
-//
-//        //identify the number of columns to create
-//        int counter = 0;
-//        for (int i = 0; i < command.length(); i++){
-//            char c = command.charAt(i);
-//            if(c == '('){
-//                while(c != ')'){
-//                    c=command.charAt(i);
-//                    if(c == ','){
-//                        counter++;
-//                    }
-//                    i++;
-//                }
-//                counter++;
-//            }
-//        }
-//
-//        //add columns - based on comma delimiter for columns
-//        tables.add(new ArrayList<String>());
-//        for(int i = 0; i < counter; i++) {
-//            tables.get(0).add(null);
-//        }
-//
-//        tables.get(0).set(0, token[3].replaceAll("[,.();]",""));
-//        tables.get(0).set(1, token[4].replaceAll("[,.();]",""));
-//        tables.get(0).set(2, token[5].replaceAll("[,.();]",""));
-//
-//        //input to a new file - write to it
-//        FileWriter f2 = new FileWriter(".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator+ token[2]+".tab");
-//        BufferedWriter bw = new BufferedWriter(f2);
-//
-//        bw.write("id");
-//        bw.write("\t");
-//        bw.write(tables.get(0).get(0));
-//        bw.write("\t");
-//        bw.write(tables.get(0).get(1));
-//        bw.write("\t");
-//        bw.write(tables.get(0).get(2));
-//
-//        bw.close();
-//
-//
-//
-//
-//
-//
-//        // Read from a file and store within 2D array
-//        File f = new File(".."+fileSeparator+"people.tab");
-//        FileInputStream fiStream = new FileInputStream(f);
-//        BufferedReader br = new BufferedReader(new InputStreamReader(fiStream));
-//
-//
-//
-//        String[] columnHeader;
-//        //read the first row - column header
-//        String s = br.readLine();
-//        ArrayList<ArrayList<String>> read_file = new ArrayList<ArrayList<String>>();
-//        read_file.add(new ArrayList<>());
-//        read_file.get(0).add(null);
-////        columnHeader = s.split("\t");
-////
-////        for(int i = 0; i < columnHeader.length;i++){
-////            System.out.println(columnHeader[i]);
-////        }
-//
-//        int i = 0;
-//        while(s != null){
-//            s = br.readLine();
-//            if(s.isEmpty()){
-//                break;
-//            }
-//
-//            if(i < counter) {
-//                for (int j = 0; j <= 3; j++) {
-//                    read_file.get(i).set(j, Arrays.toString(s.split("\t")));
-//                }
-//                i++;
-//            }
-//        }
-
+        System.out.println("Command type - "+ value.commandtype);
+        System.out.println("DB Name - " + value.DBName);
+        System.out.println("Table names - " + value.TableNames);
+        System.out.println("Col names - " + value.colNames);
+        System.out.println("Values list - " + value.values);
+        System.out.println("Alteration Type - "+ value.alterationType);
+        System.out.println("Name Values - "+ value.nameValueList);
+        System.out.println("Conditions - "+ value.conditions);
 
         DBServer server = new DBServer();
         server.blockingListenOn(8888);
