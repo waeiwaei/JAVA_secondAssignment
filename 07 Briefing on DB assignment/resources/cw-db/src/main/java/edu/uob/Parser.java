@@ -23,6 +23,10 @@ public class Parser {
 
         String token = tk.getCurrentToken();
 
+        if(token.equals(")")){
+            token = tk.nextToken();
+        }
+
         // Match ";" token
         if(!token.equals(";")){
             throw new Exception("Parse failed! - parseCommand");
@@ -379,19 +383,18 @@ public class Parser {
         attributeName += x;
 
 
-        int current_token_index = tk.getCurrent_token_index();
-        if (current_token_index < tk.indexOf(")") && tk.nextToken().equals(".")) {
-            attributeName += ".";
+        String nextToken = tk.nextToken();
 
+        if (nextToken.equals(".")) {
+            attributeName += ".";
 
             if(!tk.hasMoreTokens())
                 throw new Exception("Parse failed!");
 
-
             attributeName+=parsePlainText(tk.nextToken());
 
         }else{
-            tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+            tk.setTokenIndex(tk.getCurrent_token_index() - 2);
         }
 
         return attributeName;
@@ -430,6 +433,10 @@ public class Parser {
     private Condition parseCondition(Tokenizer tk) throws Exception {
         Condition result = null;
 
+        if (tk.getCurrentToken().equals(")")) {
+            return null;
+        }
+
         if (tk.hasMoreTokens()) {
             String token = tk.nextToken();
             if (token.equals("(")) {
@@ -437,9 +444,7 @@ public class Parser {
                 Condition leftCondition = parseCondition(tk);
                 String boolOperator = parseBoolOperator(tk.getCurrentToken());
                 Condition rightCondition = parseCondition(tk);
-                if (!tk.nextToken().equals(")")) {
-                    throw new Exception("Parse Failed - parseCondition: invalid syntax");
-                }
+
                 // combine sub-expressions
                 Condition condition = new Condition();
                 condition.cnd1 = leftCondition;
@@ -488,7 +493,7 @@ public class Parser {
             }
         }
 
-        if (result != null && !tk.hasMoreTokens() && tk.getCurrentToken().equals(";")) {
+        if (result != null) {
             return result;
         } else {
             throw new Exception("Parse Failed - parseCondition: invalid syntax");

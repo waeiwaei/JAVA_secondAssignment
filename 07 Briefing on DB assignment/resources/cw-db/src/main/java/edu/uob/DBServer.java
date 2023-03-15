@@ -26,8 +26,8 @@ public class DBServer {
     public static void main(String args[]) throws Exception {
 
         //tokenize commands from user
-        String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
-        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive' AND age == 23;";
+        //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
+        String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive' AND age == 23;";
         //String command = "DELETE FROM table1 WHERE age == 29;";
         //String command = "ALTER TABLE marks ADD percentage;";
         //String command = "SELECT t,s FROM marks;";
