@@ -26,13 +26,14 @@ public class DBServer {
     public static void main(String args[]) throws Exception {
 
         //tokenize commands from user
-        //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
-        String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive' AND age == 23;";
+        String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
+        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive' AND age == 23;";
         //String command = "DELETE FROM table1 WHERE age == 29;";
         //String command = "ALTER TABLE marks ADD percentage;";
+        //String command = "SELECT t,s FROM marks;";
         //String command = "SELECT * FROM marks;";
         //String command = "SELECT * FROM marks WHERE name != 'Dave';";
-        //String command = "CREATE TABLE marks (                        name, mark, pass);";
+        //String command = "CREATE TABLE marks (                        hello.name, mark, pass);";
         //String command = "CREATE TABLE marks;";
         //String command = "CREATE DATABASE testing;";
         //String command = "USE marks;";
@@ -54,6 +55,8 @@ public class DBServer {
         System.out.println("Alteration Type - "+ value.alterationType);
         System.out.println("Name Values - "+ value.nameValueList);
         System.out.println("Conditions - "+ value.conditions);
+        System.out.println("JOIN - "+ value.join);
+
 
         DBServer server = new DBServer();
         server.blockingListenOn(8888);

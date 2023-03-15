@@ -106,10 +106,12 @@ public class Parser {
             parseTableName(tk);
 
             if (tk.contains("(")) {
-
+                tk.setTokenIndex(tk.indexOf("("));
                 dbstate.colNames = new ArrayList<String>();
                 // Parse the attribute list
                 parseAttributeList(tk);
+                tk.setTokenIndex(tk.getCurrent_token_index()+1);
+
 
             }
         }
@@ -343,6 +345,7 @@ public class Parser {
             dbstate.colNames.add("*");
 
         } else {
+            tk.setTokenIndex(tk.getCurrent_token_index() - 1);
             parseAttributeList(tk);
         }
     }
@@ -351,18 +354,18 @@ public class Parser {
     //<AttributeList>   ::=  [AttributeName] | [AttributeName] "," <AttributeList>
     private void parseAttributeList(Tokenizer tk) throws Exception {
 
-        String x = tk.nextToken();
-        if(x.equals(")")){return;}
+        dbstate.colNames.add(parseAttributeName(tk));
 
-        if(x.equals("(") || x.equals(",")){
-            String attributeName = parseAttributeName(tk);
-            dbstate.colNames.add(attributeName);
-
-        } else {
-            throw new Exception("Parse failed! - parseAttributeList");
+        if(dbstate.commandtype.equals("SELECT")) {
+            tk.setTokenIndex(tk.getCurrent_token_index()+1);
         }
 
-        parseAttributeList(tk);
+        if(tk.nextToken().equals(",")){
+            parseAttributeList(tk);
+        }else{
+            tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+            return;
+        }
     }
 
 
@@ -380,11 +383,12 @@ public class Parser {
         if (current_token_index < tk.indexOf(")") && tk.nextToken().equals(".")) {
             attributeName += ".";
 
+
             if(!tk.hasMoreTokens())
                 throw new Exception("Parse failed!");
 
-            if(current_token_index >= tk.indexOf(")"))
-                attributeName+=parsePlainText(tk.nextToken());
+
+            attributeName+=parsePlainText(tk.nextToken());
 
         }else{
             tk.setTokenIndex(tk.getCurrent_token_index() - 1);
