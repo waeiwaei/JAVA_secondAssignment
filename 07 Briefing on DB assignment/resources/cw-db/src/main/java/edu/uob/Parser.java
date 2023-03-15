@@ -394,7 +394,13 @@ public class Parser {
             attributeName+=parsePlainText(tk.nextToken());
 
         }else{
-            tk.setTokenIndex(tk.getCurrent_token_index() - 2);
+
+            if(dbstate.commandtype.equalsIgnoreCase("SELECT") || dbstate.commandtype.equalsIgnoreCase("UPDATE") || dbstate.commandtype.equalsIgnoreCase("JOIN")){
+                tk.setTokenIndex(tk.getCurrent_token_index() - 2);
+            }else{
+                tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+            }
+
         }
 
         return attributeName;
