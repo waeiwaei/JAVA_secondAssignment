@@ -13,49 +13,47 @@ public class DBServer {
 
     private static final char END_OF_TRANSMISSION = 4;
     private String storageFolderPath;
-    private static ArrayList<String> tokens;
-    private static int current_token_index;
-    static String fileSeparator = File.separator;
-    static String currentDatabase;
-    static String secondDatabase;
-    static String currentTable;
-    static String secondaryTable;
-    static int numberOfColumns1;
+    static Process pr;
+
+    //Variables to store the current DB working on
 
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String args[]) throws IOException {
+
+        pr = new Process();
 
         //tokenize commands from user
-        //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive';";
-        String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive' AND age == 23;";
-        //String command = "DELETE FROM table1 WHERE age == 29;";
+        //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive' AND age == 3;";
+        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Wei Jin Tan' AND age == 23;";
+        //String command = "DELETE FROM marks WHERE age == 29;";
         //String command = "ALTER TABLE marks ADD percentage;";
-        //String command = "SELECT t,s FROM marks;";
+        String command = "SELECT id,name,mark FROM marks;";
         //String command = "SELECT * FROM marks;";
         //String command = "SELECT * FROM marks WHERE name != 'Dave';";
         //String command = "CREATE TABLE marks (                        hello.name, mark, pass);";
-        //String command = "CREATE TABLE marks;";
+        //String command = "CREATE TABLE marks (name, mark, pass);";
         //String command = "CREATE DATABASE testing;";
-        //String command = "USE marks;";
-        //String command = "DROP TABLE coursework;";
-        //String command = "Drop        database marks;";
+        //String command = "USE testing;";
+        //String command = "DROP TABLE marks;";
+        //String command = "Drop        database testing;";
         //String command = "JOIN coursework AND marks ON submission AND id;";
-        //String command = "INSERT INTO coursework VALUES('name', 20, 30);";
+        //String command = "INSERT INTO marks VALUES('Steve', 65, TRUE);";
 
+/*
+        String valueReturn="";
 
-        Tokenizer tokenCommands = new Tokenizer(command);
-        Parser p = new Parser();
-        DBCmd value = p.parse(tokenCommands);
+        try{
+            Tokenizer tokenCommands = new Tokenizer(command);
+            Parser p = new Parser();
+            DBCmd value = p.parse(tokenCommands);
 
-        System.out.println("Command type - "+ value.commandtype);
-        System.out.println("DB Name - " + value.DBName);
-        System.out.println("Table names - " + value.TableNames);
-        System.out.println("Col names - " + value.colNames);
-        System.out.println("Values list - " + value.values);
-        System.out.println("Alteration Type - "+ value.alterationType);
-        System.out.println("Name Values - "+ value.nameValueList);
-        System.out.println("Conditions - "+ value.conditions);
-        System.out.println("JOIN - "+ value.join);
+            pr.initialise(value);
+            valueReturn = pr.query();
+
+        }catch(Exception e){
+            System.out.print("Parse Fail");
+        }
+*/
 
 
         DBServer server = new DBServer();
@@ -77,16 +75,30 @@ public class DBServer {
     }
 
     /**
-    * KEEP this signature (i.e. {@code edu.uob.DBServer.handleCommand(String)}) otherwise we won't be
-    * able to mark your submission correctly.
-    *
-    * <p>This method handles all incoming DB commands and carries out the required actions.
-    */
+     * KEEP this signature (i.e. {@code edu.uob.DBServer.handleCommand(String)}) otherwise we won't be
+     * able to mark your submission correctly.
+     *
+     * <p>This method handles all incoming DB commands and carries out the required actions.
+     */
     public String handleCommand(String command) {
         // TODO implement your server logic here
 
 
-        return "";
+        String valueReturn="";
+        
+        try{
+            Tokenizer tokenCommands = new Tokenizer(command);
+            Parser p = new Parser();
+            DBCmd value = p.parse(tokenCommands);
+
+            pr.initialise(value);
+            valueReturn = pr.query();
+
+        }catch(Exception e){
+            System.out.print("Parse Fail");
+        }
+
+        return valueReturn;
     }
 
 

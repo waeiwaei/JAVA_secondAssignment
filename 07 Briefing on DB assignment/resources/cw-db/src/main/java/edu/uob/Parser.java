@@ -1,5 +1,6 @@
 package edu.uob;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class Parser {
@@ -24,7 +25,7 @@ public class Parser {
         String token = tk.getCurrentToken();
 
         if(token.equals(")")){
-            token = tk.nextToken();
+            token = tk.getCurrentToken();
         }
 
         // Match ";" token
@@ -114,14 +115,13 @@ public class Parser {
                 dbstate.colNames = new ArrayList<String>();
                 // Parse the attribute list
                 parseAttributeList(tk);
-                tk.setTokenIndex(tk.getCurrent_token_index()+1);
-
-
+                //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+                tk.nextToken();
             }
         }
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+1);
-
+        //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        tk.nextToken();
     }
 
     // <Update>          ::=  "UPDATE " [TableName] " SET " <NameValueList> " WHERE " <Condition>
@@ -199,8 +199,8 @@ public class Parser {
         dbstate.colNames = new ArrayList<String>();
         dbstate.colNames.add(parseAttributeName(tk));
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+2);
-
+        //tk.setTokenIndex(tk.getCurrent_token_index()+2);
+        tk.nextToken();
     }
 
 
@@ -226,8 +226,8 @@ public class Parser {
             throw new Exception("Parser Fail - parseInsert");
         }
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+1);
-
+        //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        tk.nextToken();
     }
 
 
@@ -262,7 +262,8 @@ public class Parser {
         //table 1
         dbstate.join.get(0).attributes = parseAttributeName(tk);
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        tk.nextToken();
 
         if (!tk.nextToken().equalsIgnoreCase("AND")){
             throw new Exception("Parse Failed - parseJoin");
@@ -271,7 +272,9 @@ public class Parser {
         //table 2
         dbstate.join.get(1).attributes = parseAttributeName(tk);
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+2);
+        //tk.setTokenIndex(tk.getCurrent_token_index()+2);
+        tk.nextToken();
+        tk.nextToken();
 
     }
 
@@ -294,15 +297,16 @@ public class Parser {
 
         }
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        tk.nextToken();
     }
 
 
     private void parseUse(Tokenizer tk) throws Exception {
 
         parseDatabaseName(tk);
-        tk.setTokenIndex(tk.getCurrent_token_index() + 1);
-
+        //tk.setTokenIndex(tk.getCurrent_token_index() + 1);
+        tk.nextToken();
     }
 
 
@@ -332,7 +336,13 @@ public class Parser {
             if(tk.getCurrentToken().equals(")")){
                 return;
             }
-            tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+
+            if(tk.nextToken().equals("'")){
+                tk.previousToken();
+            }
+
+
             parseValueList(tk);
 
         }
@@ -349,7 +359,8 @@ public class Parser {
             dbstate.colNames.add("*");
 
         } else {
-            tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+            //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+            tk.previousToken();
             parseAttributeList(tk);
         }
     }
@@ -360,14 +371,16 @@ public class Parser {
 
         dbstate.colNames.add(parseAttributeName(tk));
 
-        if(dbstate.commandtype.equals("SELECT")) {
-            tk.setTokenIndex(tk.getCurrent_token_index()+1);
-        }
+/*        if(dbstate.commandtype.equals("SELECT")) {
+            //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            tk.nextToken();
+        }*/
 
         if(tk.nextToken().equals(",")){
             parseAttributeList(tk);
         }else{
-            tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+            //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+            tk.previousToken();
             return;
         }
     }
@@ -395,10 +408,13 @@ public class Parser {
 
         }else{
 
-            if(dbstate.commandtype.equalsIgnoreCase("SELECT") || dbstate.commandtype.equalsIgnoreCase("UPDATE") || dbstate.commandtype.equalsIgnoreCase("JOIN")){
-                tk.setTokenIndex(tk.getCurrent_token_index() - 2);
+            if(dbstate.commandtype.equalsIgnoreCase("JOIN")){
+                //tk.setTokenIndex(tk.getCurrent_token_index() - 2);
+                tk.previousToken();
+                tk.previousToken();
             }else{
-                tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                tk.previousToken();
             }
 
         }
@@ -460,13 +476,16 @@ public class Parser {
             } else {
 
 
-                tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                tk.previousToken();
                 String attributeName = parseAttributeName(tk);
-                tk.setTokenIndex(tk.getCurrent_token_index() + 1);
+                //tk.setTokenIndex(tk.getCurrent_token_index() + 1);
+                //tk.nextToken();
                 String comparator = parseComparator(tk.nextToken());
 
                 if(tk.nextToken().equals("'")){
-                    tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                    //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                    tk.previousToken();
                 }
 
                 String value = parseValueLiteral(tk);
@@ -540,7 +559,8 @@ public class Parser {
             // Parse the remaining NameValuePairs recursively
             return parseNameValueList(tk);
         }else{
-            tk.setTokenIndex(tk.getCurrent_token_index()-1);
+            //tk.setTokenIndex(tk.getCurrent_token_index()-1);
+            tk.previousToken();
         }
 
         // If there are no more NameValuePairs, the NameValueList is valid
@@ -560,13 +580,15 @@ public class Parser {
 
         nameVal.Name.add(parseAttributeName(tk));
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+ 1);
+        //tk.setTokenIndex(tk.getCurrent_token_index()+ 1);
+        //tk.nextToken();
 
         if(!tk.nextToken().equals("=")){
             throw new Exception("Parse Failed - ParseNameValuePair");
         }
 
-        tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+        tk.nextToken();
         nameVal.Value.add(parseValueLiteral(tk));
 
         return nameVal;
@@ -583,15 +605,22 @@ public class Parser {
             if(tk.nextToken().equals("'")){
                 current_token = "''";
                 return current_token;
+            }else{
+                //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+                tk.previousToken();
             }
 
-            current_token = tk.getCurrentToken();
+            while(!tk.nextToken().equals("'") && tk.hasMoreTokens()) {
+                current_token += tk.getCurrentToken();
+                current_token += " ";
+            }
 
-            if(!tk.nextToken().equals("'")) {
-                throw new Exception("Parse Failed - parseValueLiteral");
+            if(!tk.hasMoreTokens()){
+                throw new Exception("Parse Fail - paseValueLiteral");
             }
 
             return current_token;
+
         }else{
             tk.setTokenIndex(currentTokenIndex);
         }
@@ -628,7 +657,8 @@ public class Parser {
         //int initialIndex = current_token_index;
         if ((tk.getCurrentToken().equals("+") || tk.getCurrentToken().equals("-"))) {
             integerLiteral += tk.getCurrentToken();
-            tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            tk.nextToken();
         }
 
         String subIntegerLiteral = "";
@@ -660,7 +690,8 @@ public class Parser {
 
         if (tk.getCurrentToken().equals("+") || tk.getCurrentToken().equals("-")) {
             float_literal += tk.getCurrentToken();
-            tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            //tk.setTokenIndex(tk.getCurrent_token_index()+1);
+            tk.nextToken();
         }
 
         String first = parseDigitSequence(tk.getCurrentToken());

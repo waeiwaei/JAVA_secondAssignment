@@ -34,6 +34,10 @@ public class Tokenizer {
         return tokens.get(current_token_index);
     }
 
+    public String previousToken(){
+        current_token_index--;
+        return tokens.get(current_token_index);
+    }
 
     public int getCurrent_token_index(){
         return current_token_index;
