@@ -475,16 +475,11 @@ public class Parser {
                 result = condition;
             } else {
 
-
-                //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
                 tk.previousToken();
                 String attributeName = parseAttributeName(tk);
-                //tk.setTokenIndex(tk.getCurrent_token_index() + 1);
-                //tk.nextToken();
                 String comparator = parseComparator(tk.nextToken());
 
                 if(tk.nextToken().equals("'")){
-                    //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
                     tk.previousToken();
                 }
 
@@ -571,14 +566,14 @@ public class Parser {
     private NameValue parseNameValuePair(Tokenizer tk) throws Exception {
 
         NameValue nameVal = new NameValue();
-        nameVal.Name = new ArrayList<String>();
-        nameVal.Value = new ArrayList<String>();
+        nameVal.Name = new String();
+        nameVal.Value = new String();
 
         if(!tk.hasMoreTokens()){
             throw new Exception("Parse Failed - ParseNameValuePair");
         }
 
-        nameVal.Name.add(parseAttributeName(tk));
+        nameVal.Name =parseAttributeName(tk);
 
         //tk.setTokenIndex(tk.getCurrent_token_index()+ 1);
         //tk.nextToken();
@@ -589,7 +584,7 @@ public class Parser {
 
         //tk.setTokenIndex(tk.getCurrent_token_index()+1);
         tk.nextToken();
-        nameVal.Value.add(parseValueLiteral(tk));
+        nameVal.Value = parseValueLiteral(tk);
 
         return nameVal;
     }
@@ -739,11 +734,11 @@ public class Parser {
     //[BooleanLiteral]  ::=  "TRUE" | "FALSE"
     private String parseBooleanLiteral(String token) throws Exception {
 
-        if(!token.equalsIgnoreCase("TRUE") || !token.equalsIgnoreCase("FALSE")){
-            return "";
+        if(token.equalsIgnoreCase("TRUE") || token.equalsIgnoreCase("FALSE")){
+            return token;
         }
 
-        return token;
+        return "";
     }
 
     //String command = "UPDATE marks SET mark = 38 WHERE name == 'Clive';";

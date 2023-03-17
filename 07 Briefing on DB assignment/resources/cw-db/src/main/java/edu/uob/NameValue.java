@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class NameValue {
 
-    public ArrayList<String> Name;
-    public ArrayList<String> Value;
+    public String Name;
+    public String Value;
 
 }

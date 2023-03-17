@@ -20,24 +20,24 @@ public class DBServer {
 
     public static void main(String args[]) throws IOException {
 
-        pr = new Process();
-
         //tokenize commands from user
         //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive' AND age == 3;";
-        //String command = "UPDATE marks SET mark = 38 WHERE name == 'Wei Jin Tan' AND age == 23;";
-        //String command = "DELETE FROM marks WHERE age == 29;";
+        //String command = "UPDATE marks SET mark = 55, pass = FALSE WHERE name == 'Dave' OR id == 3;";
+        //String command = "DELETE FROM marks WHERE mark == 55;";
         //String command = "ALTER TABLE marks ADD percentage;";
-        String command = "SELECT id,name,mark FROM marks;";
+        //String command = "ALTER TABLE marks DROP name;";
+        //String command = "SELECT id,name,mark FROM marks;";
         //String command = "SELECT * FROM marks;";
-        //String command = "SELECT * FROM marks WHERE name != 'Dave';";
+        //String command = "SELECT * FROM marks WHERE name == 'Dave' AND mark == 55;";
         //String command = "CREATE TABLE marks (                        hello.name, mark, pass);";
         //String command = "CREATE TABLE marks (name, mark, pass);";
-        //String command = "CREATE DATABASE testing;";
+        //String command = "CREATE Table coursework(task, submission);";
         //String command = "USE testing;";
         //String command = "DROP TABLE marks;";
         //String command = "Drop        database testing;";
         //String command = "JOIN coursework AND marks ON submission AND id;";
-        //String command = "INSERT INTO marks VALUES('Steve', 65, TRUE);";
+        //String command = "INSERT INTO coursework VALUES('DB', 1);";
+
 
 /*
         String valueReturn="";
@@ -47,13 +47,14 @@ public class DBServer {
             Parser p = new Parser();
             DBCmd value = p.parse(tokenCommands);
 
-            pr.initialise(value);
+            pr = new Process(value);
             valueReturn = pr.query();
 
         }catch(Exception e){
             System.out.print("Parse Fail");
         }
 */
+
 
 
         DBServer server = new DBServer();
@@ -85,13 +86,13 @@ public class DBServer {
 
 
         String valueReturn="";
-        
+
         try{
             Tokenizer tokenCommands = new Tokenizer(command);
             Parser p = new Parser();
             DBCmd value = p.parse(tokenCommands);
 
-            pr.initialise(value);
+            pr = new Process(value);
             valueReturn = pr.query();
 
         }catch(Exception e){
