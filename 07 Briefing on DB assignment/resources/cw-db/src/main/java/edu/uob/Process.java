@@ -8,7 +8,7 @@ import java.util.Arrays;
 public class Process {
 
     //ArrayList<String> attributeList;
-    static String database = "testing";
+    static String database;
     static String fileSeparator = File.separator;
     static String path = (".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator);
     DBCmd dbcmd;
@@ -340,15 +340,34 @@ public class Process {
                     }
                 }
 
+                for(int e = 0; e < dbcmd.colNames.size(); e++) {
+                    result += dbcmd.colNames.get(e);
+                    result+= "\t";
+                }
+
+                int trueCounter = 0;
+                for(int d = 0; d < arr.length; d++){
+
+                    if(arr[d].equals(true)){
+                        trueCounter++;
+                    }
+                }
+
                 String nextLine = br.readLine();
                 while(nextLine != null){
                     String arr1[] = nextLine.split("\t");
+                    result+="\n";
                     for(i = 0; i < arr.length;i++){
-                        if(arr[i]){
-                            nextLine+="\t"+arr1[i];
-                        }
+                        if(i < trueCounter) {
+                            if (arr[i]) {
+                                System.out.println("test");
+                                if (!conditionProcessList(dbcmd, nextLine, attributeList)) {
+                                    result += arr1[i] + "\t";
+                                }
+                            }
+                        }else{break;}
                     }
-                    result+=nextLine;
+                    //result+=nextLine;
                     nextLine=br.readLine();
                 }
             }
@@ -643,24 +662,39 @@ public class Process {
             for(int j=0;j<entry2.size();j++){
                 String arr1[] = entry1.get(i).split("\t");
                 String arr2[] = entry2.get(j).split("\t");
-                if(arr1[indatt1].equals(arr2[indatt2])){
+                if(indatt1 < arr1.length && indatt2 < arr2.length) {
+                    if (arr1[indatt1].equals(arr2[indatt2])) {
 
-                    //creates a new arraylist object which initialised with the elements of arr
-                    List<String> list1 = new ArrayList<String>(Arrays.asList(arr1));
-                    List<String> list2 = new ArrayList<String>(Arrays.asList(arr2));
+                        //creates a new arraylist object which initialised with the elements of arr
+                        List<String> list1 = new ArrayList<String>(Arrays.asList(arr1));
+                        List<String> list2 = new ArrayList<String>(Arrays.asList(arr2));
 
-                    //removes specific entries from ArrayList
-                    list1.remove(arr1[indatt1]);
-                    list2.remove(arr2[indatt2]);
+                        //removes specific entries from ArrayList
+                        list1.remove(arr1[indatt1]);
+                        list2.remove(arr2[indatt2]);
 
-                    //converts List object to an array, in which this case returns a new array of type String[0]
-                    arr1 = list1.toArray(new String[0]);
-                    arr2 = list2.toArray(new String[0]);
-                    result += String.join("\t", arr1) + "\t" + String.join("\t", arr2);
+                        //converts List object to an array, in which this case returns a new array of type String[0]
+                        arr1 = list1.toArray(new String[0]);
+                        arr2 = list2.toArray(new String[0]);
+                        result += String.join("\t", arr1) + "\t" + String.join("\t", arr2) + "\n";
+                    }
+                }else{
+                    break;
                 }
             }
-            result+="\n";
         }
+
+
+/*        int idCounter = 0;
+        //replace the id with a new value
+        String joinArray[] = result.split("\n");
+        String updateIdArray[] = new String[joinArray.length];
+
+        updateIdArray[0] = joinArray[0];
+
+        for(int i = 1; i < joinArray.length; i++){
+            joinArray[i].
+        }*/
 
 
         return result;
@@ -840,6 +874,8 @@ public class Process {
             String value = cnd.value;
             String comparator = cnd.comparator;
 
+            System.out.println(attName + " " +value +" " +comparator);
+
             int index = find(attName, attributeList);
 
             if(index == -1){
@@ -976,27 +1012,38 @@ public class Process {
         String x = nextLine.split("\t")[index].trim();
         value  = value.trim();
 
+        System.out.println("Next line : " + x);
+
         try {
             // Try to convert the string to an integer
             int intParseCol = Integer.parseInt(x);
             int intParseVal = Integer.parseInt(value);
 
+            System.out.println("Next line intParseCol: " + intParseCol);
+            System.out.println("Next line intParseVal: " + intParseVal);
+
             if(intParseVal > intParseCol){
                 return true;
             }
 
+            return false;
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
+
         try {
             // Try to convert the string to a float
             float floatParseCol = Float.parseFloat(x);
             float floatParseVal = Float.parseFloat(value);
 
+            System.out.println("Next line floatParseCol: " + floatParseCol);
+            System.out.println("Next line floatParseVal: " + floatParseVal);
+
             if(floatParseCol > floatParseVal){
                 return true;
             }
 
+            return false;
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
@@ -1007,12 +1054,12 @@ public class Process {
                 return true;
             }
 
+            return false;
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
 
         return false;
-
     }
 
 

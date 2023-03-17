@@ -26,34 +26,34 @@ public class DBServer {
         //String command = "DELETE FROM marks WHERE mark == 55;";
         //String command = "ALTER TABLE marks ADD percentage;";
         //String command = "ALTER TABLE marks DROP name;";
-        //String command = "SELECT id,name,mark FROM marks;";
+        //String command = "SELECT id,name,mark FROM marks WHERE name == 'Dave';";
         //String command = "SELECT * FROM marks;";
         //String command = "SELECT * FROM marks WHERE name == 'Dave' AND mark == 55;";
         //String command = "CREATE TABLE marks (                        hello.name, mark, pass);";
-        //String command = "CREATE TABLE marks (name, mark, pass);";
-        //String command = "CREATE Table coursework(task, submission);";
+        //String command = "CREATE TABLE file1 (name, mark, pass);";
+       // String command = "CREATE database testing2;";
         //String command = "USE testing;";
         //String command = "DROP TABLE marks;";
         //String command = "Drop        database testing;";
         //String command = "JOIN coursework AND marks ON submission AND id;";
         //String command = "INSERT INTO coursework VALUES('DB', 1);";
 
-
-/*
-        String valueReturn="";
-
-        try{
-            Tokenizer tokenCommands = new Tokenizer(command);
-            Parser p = new Parser();
-            DBCmd value = p.parse(tokenCommands);
-
-            pr = new Process(value);
-            valueReturn = pr.query();
-
-        }catch(Exception e){
-            System.out.print("Parse Fail");
-        }
-*/
+//
+//        String valueReturn="";
+//
+//        try{
+//            Tokenizer tokenCommands = new Tokenizer(command);
+//            Parser p = new Parser();
+//            DBCmd value = p.parse(tokenCommands);
+//
+//            pr = new Process(value);
+//            valueReturn = pr.query();
+//
+//            System.out.println(valueReturn);
+//
+//        }catch(Exception e){
+//            System.out.print("Parse Fail");
+//        }
 
 
 
@@ -96,10 +96,13 @@ public class DBServer {
             valueReturn = pr.query();
 
         }catch(Exception e){
+
             System.out.print("Parse Fail");
+
         }
 
         return valueReturn;
+
     }
 
 

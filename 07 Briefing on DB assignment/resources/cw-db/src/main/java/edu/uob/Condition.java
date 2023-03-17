@@ -8,3 +8,5 @@ public class Condition {
     String comparator;
     String value;
 }
+
+
