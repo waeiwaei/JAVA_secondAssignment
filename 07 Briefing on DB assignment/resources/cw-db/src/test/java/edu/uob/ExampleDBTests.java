@@ -6,11 +6,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class ExampleDBTests {
 
     private DBServer server;
+
 
     // Create a new server _before_ every @Test
     @BeforeEach
@@ -101,5 +106,6 @@ public class ExampleDBTests {
         assertTrue(response.contains("[ERROR]"), "An attempt was made to access a non-existent table, however an [ERROR] tag was not returned");
         assertFalse(response.contains("[OK]"), "An attempt was made to access a non-existent table, however an [OK] tag was returned");
     }
+
 
 }

@@ -7,10 +7,9 @@ import java.util.Arrays;
 
 public class Process {
 
-    //ArrayList<String> attributeList;
     static String database;
     static String fileSeparator = File.separator;
-    static String path = (".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator);
+    static String storageFolderPath = (".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator);
     DBCmd dbcmd;
 
     public Process(DBCmd dbstate){
@@ -75,13 +74,22 @@ public class Process {
 
     private String createTableCMD() throws Exception {
 
-        //check table name with keyword - FROM, JOIN, DELETE, DROP, USE, SELECT, UPDATE, ALTER
-        String filePath = path+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
-        File f = new File(filePath);
-        FileWriter fl = new FileWriter(f);
-        BufferedWriter bw = new BufferedWriter(fl);
+        String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
 
-        if(dbcmd.colNames.size() == 0){
+        for(int i = 0; i < keywords.length; i++){
+            if(keywords[i].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+                return "[ERROR] - cannot name table from keyword";
+            }
+        }
+
+        dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
+
+        //check table name with keyword - FROM, JOIN, DELETE, DROP, USE, SELECT, UPDATE, ALTER
+        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
+        File f = new File(filePath);
+
+
+        if(dbcmd.colNames == null){
 
             if(!f.exists()){
                 boolean create = f.createNewFile();
@@ -90,49 +98,84 @@ public class Process {
                 }else{
                     System.out.println("Table not created");
                 }
+
             }else if (f.exists()){
-                return "[Error - Table already exists]";
+                return "[ERROR] - Table already exists";
             }
 
         }else{
+
+            for(int i = 0; i < keywords.length; i++){
+                for(int j = 0; j < dbcmd.colNames.size(); j++) {
+                    if (keywords[i].equalsIgnoreCase(dbcmd.colNames.get(j))) {
+                        return "[ERROR] - cannot have attributes with keyword names";
+                    }
+                }
+            }
+
+            if(!f.exists()){
+                boolean create = f.createNewFile();
+                if(create){
+                    System.out.println("Table created");
+                }else{
+                    System.out.println("Table not created");
+                }
+
+            }else if (f.exists()){
+                return "[ERROR] - Table already exists";
+            }
+
+            FileWriter fl = new FileWriter(f);
+            BufferedWriter bw = new BufferedWriter(fl);
 
             bw.write("id");
             bw.write("\t");
 
             for(int i = 0; i < dbcmd.colNames.size(); i++){
-                bw.write(dbcmd.colNames.get(i));
+                bw.write(dbcmd.colNames.get(i).toLowerCase());
                 bw.write("\t");
             }
 
             bw.close();
         }
 
-        return "[OK]";
+        return "[OK]\n";
     }
 
     private String createDatabaseCMD() throws Exception {
 
-        String folderPath = path+dbcmd.DBName;
+        String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
+
+        for(int i = 0; i < keywords.length; i++){
+
+            if (keywords[i].equalsIgnoreCase(dbcmd.DBName)) {
+                return "[ERROR] - cannot database from keyword";
+            }
+
+        }
+
+        dbcmd.DBName = dbcmd.DBName.toLowerCase();
+
+        String folderPath = storageFolderPath+fileSeparator+dbcmd.DBName;
         File folder = new File(folderPath);
 
         if(!folder.exists()){
             boolean create = folder.mkdirs();
+
             if(create){
                 System.out.println("Database created");
-            }else{
-                System.out.println("Database not created");
             }
 
         }else if(folder.exists() && folder.isDirectory()){
-            return "[ERROR - Database already exists]";
+            return "[ERROR] - Database already exists";
         }
 
-        return "[OK]";
+        return "[OK]\n";
     }
 
     private String updateCMD() throws Exception{
 
-        String filePath = path+database+fileSeparator+dbcmd.TableNames.get(0) + ".tab";
+        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0) + ".tab";
         File f = new File(filePath);
         FileInputStream fl = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
@@ -182,7 +225,7 @@ public class Process {
         ArrayList<String> updateVal = new ArrayList<String>();
 
         for(int i = 0; i < dbcmd.nameValueList.size(); i++){
-            updateName.add(dbcmd.nameValueList.get(i).Name);
+            updateName.add(dbcmd.nameValueList.get(i).Name.toLowerCase());
         }
 
         for(int i = 0; i < dbcmd.nameValueList.size(); i++){
@@ -201,15 +244,6 @@ public class Process {
 
         int rowChanges = tracker.size();
         int colChanges = indexCol.size();
-        int valChanges = updateVal.size();
-
-        //combine with rows found that match the condition
-/*        while(counter != 0) {
-            updEntries[tracker.get(i)][indexCol.get(i)] = updateVal.get(i);
-            i++;
-            counter--;
-        }
-        */
 
         for(int j = 0; j < colChanges; j++){
             for(int k = 0; k < rowChanges; k++){
@@ -242,7 +276,7 @@ public class Process {
 
         bw.close();
 
-        return "[OK]";
+        return "[OK]\n";
     }
 
     private String selectCMD() throws Exception {
@@ -250,8 +284,10 @@ public class Process {
         ArrayList<String>  attributeList = new ArrayList<String>();
 
         //get the table path
-        String filePath = path+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
+        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File f = new File(filePath);
+        if(!f.exists())
+            return "[ERROR]";
         FileInputStream fl = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
 
@@ -262,22 +298,32 @@ public class Process {
             attributeList.add(attributes[i]);
         }
 
-        String result = "";
-
+        String result = "[OK]\n";
 
         //if no conditions in SELECT query
         if(dbcmd.conditions == null){
 
             if(dbcmd.colNames.get(0).equals("*")){
-                result = String.join("\t", attributeList);
+                result+= String.join("\t", attributeList);
                 String nextLine = br.readLine();
                 while(nextLine!=null){
                     result+= "\n"+nextLine;
                     nextLine = br.readLine();
                 }
             }else{
-                Boolean arr[] = new Boolean[attributes.length];
+                boolean arr[] = new boolean[attributes.length];
                 int i = 0;
+
+                //removes '.' character
+                char targetChar = '.';
+                for (int j = 0; j < dbcmd.colNames.size(); j++) {
+                    String str = dbcmd.colNames.get(j);
+                    int index = str.indexOf(targetChar);
+                    if (index != -1) {
+                        String modifiedStr = str.substring(index + 1);
+                        dbcmd.colNames.set(j, modifiedStr);
+                    }
+                }
 
                 for(i = 0; i < dbcmd.colNames.size(); i++){
                     int j = 0;
@@ -302,76 +348,96 @@ public class Process {
                     String arr1[] = nextLine.split("\t");
                     result+="\n";
                     for(int d = 0; d < arr.length;d++){
-                        if(arr[d] != null) {
-                            if (arr[d] == true) {
-                                result += arr1[d] + "\t";
-                            }
+                        if (arr[d] == true) {
+                            result += arr1[d] + "\t";
                         }
                     }
 
-                    //result+=nextLine;
                     nextLine=br.readLine();
                 }
             }
-        }else{
+        }else {
 
-            if(dbcmd.colNames.get(0).equals("*")){
-                result = String.join("\t", attributeList);
+            if (dbcmd.colNames.get(0).equals("*")) {
+                result += String.join("\t", attributeList);
                 String nextLine = br.readLine();
-                while(nextLine!=null){
-                    if(conditionProcessList(dbcmd, nextLine, attributeList))
-                    result+= "\n" + nextLine;
+                while (nextLine != null) {
+                    if (conditionProcessList(dbcmd, nextLine, attributeList))
+                        result += "\n" + nextLine;
                     nextLine = br.readLine();
                 }
-            }else{
-                Boolean arr[] = new Boolean[attributes.length];
+            } else {
+                boolean arr[] = new boolean[attributes.length];
                 int i = 0;
 
-                for(i = 0; i < dbcmd.colNames.size(); i++){
+
+                //removes '.' character
+                char targetChar = '.';
+                for (int j = 0; j < dbcmd.colNames.size(); j++) {
+                    String str = dbcmd.colNames.get(j);
+                    int index = str.indexOf(targetChar);
+                    if (index != -1) {
+                        String modifiedStr = str.substring(index + 1);
+                        dbcmd.colNames.set(j, modifiedStr);
+                    }
+                }
+
+
+                for (i = 0; i < dbcmd.colNames.size(); i++) {
                     int j = 0;
-                    for(j = 0; j < attributes.length; j++) {
+                    for (j = 0; j < attributes.length; j++) {
                         if (dbcmd.colNames.get(i).equals(attributes[j])) {
                             arr[j] = true;
                             break;
                         }
                     }
-                    if(j == attributes.length){
-                        throw new Exception("Attribute " +dbcmd.colNames.get(i)+" not found");
+                    if (j == attributes.length) {
+                        System.out.println("Entering here!");
+                        throw new Exception("Attribute " + dbcmd.colNames.get(i) + " not found");
                     }
                 }
 
-                for(int e = 0; e < dbcmd.colNames.size(); e++) {
+                for (int e = 0; e < dbcmd.colNames.size(); e++) {
                     result += dbcmd.colNames.get(e);
-                    result+= "\t";
+                    result += "\t";
                 }
+                result += "\n";
 
                 int trueCounter = 0;
-                for(int d = 0; d < arr.length; d++){
+                for (int d = 0; d < arr.length; d++) {
 
-                    if(arr[d].equals(true)){
+                    if (arr[d] == true) {
                         trueCounter++;
+                    }
+                }
+
+                List<Integer> trueIndexes = new ArrayList<Integer>();
+                for (int in = 0; in < arr.length; in++) {
+                    if (arr[in]) {
+                        trueIndexes.add(in);
                     }
                 }
 
                 String nextLine = br.readLine();
                 while(nextLine != null){
+
+                    boolean flag = true;
                     String arr1[] = nextLine.split("\t");
-                    result+="\n";
-                    for(i = 0; i < arr.length;i++){
-                        if(i < trueCounter) {
-                            if (arr[i]) {
-                                System.out.println("test");
-                                if (!conditionProcessList(dbcmd, nextLine, attributeList)) {
-                                    result += arr1[i] + "\t";
-                                }
-                            }
+
+                    for(int u = 0; u < trueIndexes.size() ;u++){
+                        if(u < trueCounter && conditionProcessList(dbcmd, nextLine, attributeList)) {
+                            flag = false;
+                            result += arr1[trueIndexes.get(u)] + "\t";
                         }else{break;}
                     }
-                    //result+=nextLine;
-                    nextLine=br.readLine();
-                }
-            }
 
+                    nextLine=br.readLine();
+
+                    if(nextLine!=null && flag == false)
+                        result+="\n";
+                }
+
+            }
         }
 
         return result;
@@ -379,7 +445,7 @@ public class Process {
 
     private String alterCMD() throws Exception {
 
-        String filePath = path + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
+        String filePath = storageFolderPath + fileSeparator + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
 
         File f = new File(filePath);
         FileInputStream fl = new FileInputStream(f);
@@ -417,7 +483,35 @@ public class Process {
         //include column at the end - with the id attribute
         if(dbcmd.alterationType.equalsIgnoreCase("Add")){
 
-            attributeList.add(dbcmd.colNames.get(0));
+            String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
+
+            for(int i = 0; i < keywords.length; i++){
+                if(keywords[i].equalsIgnoreCase(dbcmd.colNames.get(0))){
+
+                    //populate columns
+                    for(int ind = 0; ind < attributeList.size(); ind++){
+                        bw.write(attributeList.get(ind));
+                        bw.write("\t");
+                    }
+
+                    bw.write("\n");
+
+                    //populate entries
+                    for(int d = 0; d < entries.size(); d++){
+                        if(entries.get(d) == null){
+                            break;
+                        }
+
+                        bw.write(entries.get(d));
+                        bw.write("\n");
+                    }
+
+                    bw.close();
+                    return "[ERROR] - attribute name cannot be a keyword";
+                }
+            }
+
+            attributeList.add(dbcmd.colNames.get(0).toLowerCase());
 
             //populate columns
             for(int ind = 0; ind < attributeList.size(); ind++){
@@ -495,31 +589,45 @@ public class Process {
             bw.close();
         }
 
-        return "";
+        return "[OK]\n";
     }
 
     private String insertCMD() throws IOException {
 
-        String filePath = path + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
+        String filePath = storageFolderPath + fileSeparator + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
 
         String idIndex = String.valueOf(checkIdIndex(filePath));
+
+        File f1 = new File(filePath);
+        FileReader fr = new FileReader(f1);
+        BufferedReader br = new BufferedReader(fr);
+
+        String attributeList [] = br.readLine().split("\t");
+        int numberAttributes = attributeList.length - 1;
+        br.close();
+
 
         File f = new File(filePath);
         FileWriter fl = new FileWriter(f, true);
         BufferedWriter bw = new BufferedWriter(fl);
 
-        if (dbcmd.values.size() != 0) {
+        if (dbcmd.values.size() != 0 && dbcmd.values.size() == numberAttributes) {
 
             if (!f.exists()) {
                 System.out.println("Table not created");
             } else if (f.exists()) {
 
-
                 bw.newLine();
+
                 bw.write(idIndex);
                 bw.write("\t");
 
                 for (int i = 0; i < dbcmd.values.size(); i++) {
+
+                    //find if there is a "+" then we remove it
+                    if(dbcmd.values.get(i).contains("+")){
+                        dbcmd.values.set(i, dbcmd.values.get(i).replace("+" ,""));
+                    }
 
                     bw.write(dbcmd.values.get(i));
                     bw.write("\t");
@@ -527,11 +635,12 @@ public class Process {
 
             }
             bw.close();
-            return "[OK]";
+            return "[OK]\n";
+        }else{
+            bw.close();
         }
 
-        bw.close();
-        return "[ERROR - insertCMD]";
+        return "[ERROR] - insertCMD \n";
     }
 
     private int checkIdIndex(String filepath) throws IOException {
@@ -548,9 +657,10 @@ public class Process {
 
         while(x != null){
             x = br.readLine();
-            if(x != null){
-                result = Integer.parseInt(x.split("\t")[0]);
+            if(x == null) {
+                break;
             }
+            result = Integer.parseInt(x.split("\t")[0]);
         }
 
         result += 1;
@@ -567,24 +677,29 @@ public class Process {
         String table2 = dbcmd.join.get(1).table;
 
         //buffered reader
-        String filePath1 = path+database+fileSeparator+table1+".tab";
+        String filePath1 = storageFolderPath+fileSeparator+database+fileSeparator+table1+".tab";
         File f1 = new File(filePath1);
+
+        if(!f1.exists()){
+            return "[ERROR]\n";
+        }
+
         FileInputStream fl1 = new FileInputStream(f1);
         BufferedReader br1 = new BufferedReader(new InputStreamReader(fl1));
 
+        String filePath2 = storageFolderPath+fileSeparator+database+fileSeparator+table2+".tab";
+        File f2 = new File(filePath2);
 
-        if(!f1.exists()){
-            throw new Exception("Error JOIN");
+        if(!f2.exists()){
+            return "[ERROR]\n";
         }
 
 
-        String filePath2 = path+database+fileSeparator+table2+".tab";
-        File f2 = new File(filePath2);
         FileInputStream fl2 = new FileInputStream(f2);
         BufferedReader br2 = new BufferedReader(new InputStreamReader(fl2));
 
         if(!f2.exists()){
-            throw new Exception("Error JOIN");
+            throw new Exception("Error - unable to find file");
         }
 
         //br1.readLine() -> Reads the lines of first table file
@@ -604,7 +719,7 @@ public class Process {
         //ArrayList<String> attrL2 -> Stores Attribute List of second Table
         ArrayList<String> attrL2 = new ArrayList<String>();
 
-        for(int i = 0; i < a1.length; i++){
+        for(int i = 0; i < a2.length; i++){
             attrL2.add(a2[i]);
         }
 
@@ -635,6 +750,7 @@ public class Process {
         String io = "";
 
         io += "id\t";
+
         for(int i = 1; i < attrL1.size(); i++){
 
             if(i != indatt1){
@@ -643,17 +759,15 @@ public class Process {
 
         }
 
-        for(int i = 1; i < attrL1.size(); i++){
-
+        for(int i = 1; i < attrL2.size(); i++){
             if(i != indatt2){
                 io += dbcmd.join.get(1).table + "." + attrL2.get(i) + "\t";
             }
-
         }
 
         io+= "\n";
 
-        String result = "";
+        String result = "[OK]\n";
 
         result += io;
 
@@ -685,38 +799,49 @@ public class Process {
         }
 
 
-/*        int idCounter = 0;
-        //replace the id with a new value
+        String t1 = "";
+
+        //replace the id with a new ID values
         String joinArray[] = result.split("\n");
         String updateIdArray[] = new String[joinArray.length];
+        int idCounter = 1;
 
-        updateIdArray[0] = joinArray[0];
+        //we wanna split up based on tabs
+        for(int i = 2; i < joinArray.length; i++){
+            String tempArray [] = joinArray[i].split("\t");
+            tempArray[0] = Integer.toString(idCounter);
 
-        for(int i = 1; i < joinArray.length; i++){
-            joinArray[i].
-        }*/
+            for(int j = 0; j < tempArray.length; j++){
+                t1+= tempArray[j] + "\t";
+            }
+
+            t1+= "\n";
+
+            idCounter++;
+        }
 
 
+        result = "[OK]\n" + io + t1;
         return result;
     }
 
     private String dropTableCMD() {
 
-        String filePath = path+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
+        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File fl = new File(filePath);
 
         if(fl.exists()){
             fl.delete();
         }else{
-            return "[ERROR - Table does not exist]";
+            return "[ERROR] - Table does not exist";
         }
 
-        return "[OK]";
+        return "[OK]\n";
     }
 
     private String dropDatabaseCMD() {
 
-        String folderPath = path+dbcmd.DBName;
+        String folderPath = storageFolderPath+fileSeparator+dbcmd.DBName;
         File folder = new File(folderPath);
 
         if(folder.exists()) {
@@ -724,10 +849,10 @@ public class Process {
                 folder.delete();
             }
         }else {
-            return "[ERROR - Database does not exist]";
+            return "[ERROR] - Database does not exist";
         }
 
-        return "[OK]";
+        return "[OK]\n";
     }
 
     public boolean deleteSubdirectories(File directory) {
@@ -754,14 +879,14 @@ public class Process {
         return false;
     }
 
-        private String useCMD() {
-        String folderPath = path+dbcmd.DBName;
+    private String useCMD() {
+        String folderPath = storageFolderPath+fileSeparator+dbcmd.DBName;
         File folder = new File(folderPath);
 
         if(folder.exists()) {
             this.database = dbcmd.DBName;
         }else {
-            return "[ERROR - Database does not exist]";
+            return "[ERROR] - Database does not exist";
         }
 
         return "[OK]";
@@ -773,11 +898,11 @@ public class Process {
         String table = dbcmd.TableNames.get(0);
 
         //buffered reader
-        String filePath1 = path+database+fileSeparator+table+".tab";
+        String filePath1 = storageFolderPath+fileSeparator+database+fileSeparator+table+".tab";
         File f1 = new File(filePath1);
 
         if(!f1.exists()){
-            throw new Exception("File does not exist");
+            return "[ERROR]\n";
         }
 
         FileInputStream fl1 = new FileInputStream(f1);
@@ -821,14 +946,19 @@ public class Process {
         bw.write("\n");
 
         for(int i = 0; i < updateEntries.size(); i++){
-            bw.write(updateEntries.get(i) + "\n");
+            bw.write(updateEntries.get(i));
+
+            if(i != updateEntries.size() - 1){
+                bw.write("\n");
+            }
+
         }
+
+
 
         bw.close();
 
-
-        result = "[OK]";
-        return result;
+        return "[OK]\n";
     }
 
     public Boolean conditionProcessList(DBCmd dbcmd, String nextLine, ArrayList<String> attributeList) throws Exception {
@@ -873,8 +1003,6 @@ public class Process {
             String attName = cnd.attributeName;
             String value = cnd.value;
             String comparator = cnd.comparator;
-
-            System.out.println(attName + " " +value +" " +comparator);
 
             int index = find(attName, attributeList);
 
@@ -930,6 +1058,8 @@ public class Process {
                 return true;
             }
 
+            return false;
+
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
@@ -942,19 +1072,24 @@ public class Process {
                 return true;
             }
 
+            return false;
+
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
 
         try {
 
-            if(x.equalsIgnoreCase(value)){
+            if(x.equals(value)){
                 return true;
             }
+
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
+
 
         return false;
 
@@ -975,6 +1110,8 @@ public class Process {
                 return true;
             }
 
+            return false;
+
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
@@ -987,19 +1124,12 @@ public class Process {
                 return true;
             }
 
-        } catch (NumberFormatException e) {
-            // Ignore the exception and move on to the next check
-        }
-
-        try {
-
-            if(!x.equalsIgnoreCase(value)){
-                return true;
-            }
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
+
 
 
         return false;
@@ -1048,16 +1178,6 @@ public class Process {
             // Ignore the exception and move on to the next check
         }
 
-        try {
-
-            if(!x.equalsIgnoreCase(value)){
-                return true;
-            }
-
-            return false;
-        } catch (NumberFormatException e) {
-            // Ignore the exception and move on to the next check
-        }
 
         return false;
     }
@@ -1073,9 +1193,11 @@ public class Process {
             int intParseCol = Integer.parseInt(x);
             int intParseVal = Integer.parseInt(value);
 
-            if(intParseVal >= intParseCol){
+            if(intParseVal <= intParseCol){
                 return true;
             }
+
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
@@ -1085,19 +1207,11 @@ public class Process {
             float floatParseCol = Float.parseFloat(x);
             float floatParseVal = Float.parseFloat(value);
 
-            if(floatParseCol >= floatParseVal){
+            if(floatParseVal <= floatParseCol){
                 return true;
             }
 
-        } catch (NumberFormatException e) {
-            // Ignore the exception and move on to the next check
-        }
-
-        try {
-
-            if(!x.equalsIgnoreCase(value)){
-                return true;
-            }
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
@@ -1118,9 +1232,11 @@ public class Process {
             int intParseCol = Integer.parseInt(x);
             int intParseVal = Integer.parseInt(value);
 
-            if(intParseVal <= intParseCol){
+            if(intParseVal >= intParseCol){
                 return true;
             }
+
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
@@ -1130,23 +1246,16 @@ public class Process {
             float floatParseCol = Float.parseFloat(x);
             float floatParseVal = Float.parseFloat(value);
 
-            if(floatParseCol <= floatParseVal){
+            if(floatParseVal <= floatParseCol){
                 return true;
             }
+
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
 
-        try {
-
-            if(!x.equalsIgnoreCase(value)){
-                return true;
-            }
-
-        } catch (NumberFormatException e) {
-            // Ignore the exception and move on to the next check
-        }
 
 
         return false;
@@ -1167,6 +1276,8 @@ public class Process {
                 return true;
             }
 
+            return false;
+
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
@@ -1179,6 +1290,8 @@ public class Process {
                 return true;
             }
 
+            return false;
+
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
@@ -1188,6 +1301,8 @@ public class Process {
             if(!x.equalsIgnoreCase(value)){
                 return true;
             }
+
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
@@ -1212,6 +1327,7 @@ public class Process {
                 return true;
             }
 
+            return false;
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
@@ -1224,15 +1340,20 @@ public class Process {
                 return true;
             }
 
+            return false;
+
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
 
         try {
 
-            if(!x.equalsIgnoreCase(value)){
+            if(x.contains(value)){
                 return true;
             }
+
+
+            return false;
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
@@ -1242,7 +1363,8 @@ public class Process {
     }
 
     public Integer find(String attName, ArrayList<String> attributeList){
-        return attributeList.indexOf(attName);
+
+        return attributeList.indexOf(attName.toLowerCase());
     }
 
 }

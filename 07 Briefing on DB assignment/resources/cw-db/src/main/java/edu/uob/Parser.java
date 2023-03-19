@@ -32,6 +32,10 @@ public class Parser {
         if(!token.equals(";")){
             throw new Exception("Parse failed! - parseCommand");
         }
+
+        if(token.equals(";") && tk.hasMoreTokens()){
+            throw new Exception("Parse failed! - only one command per line");
+        }
     }
 
     //<CommandType>     ::=  <Use> | <Create> | <Drop> | <Alter> | <Insert> | <Select> | <Update> | <Delete> | <Join>
@@ -218,6 +222,11 @@ public class Parser {
 
 
         if(tk.nextToken().equals("(")){
+
+            if(tk.nextToken().equals("'")){
+                tk.previousToken();
+            }
+
             dbstate.values = new ArrayList<String>();
             parseValueList(tk);
         }
@@ -369,12 +378,7 @@ public class Parser {
     //<AttributeList>   ::=  [AttributeName] | [AttributeName] "," <AttributeList>
     private void parseAttributeList(Tokenizer tk) throws Exception {
 
-        dbstate.colNames.add(parseAttributeName(tk));
-
-/*        if(dbstate.commandtype.equals("SELECT")) {
-            //tk.setTokenIndex(tk.getCurrent_token_index()+1);
-            tk.nextToken();
-        }*/
+        dbstate.colNames.add(parseAttributeName(tk).toLowerCase());
 
         if(tk.nextToken().equals(",")){
             parseAttributeList(tk);
@@ -582,8 +586,10 @@ public class Parser {
             throw new Exception("Parse Failed - ParseNameValuePair");
         }
 
-        //tk.setTokenIndex(tk.getCurrent_token_index()+1);
-        tk.nextToken();
+        if(tk.nextToken().equals("'")){
+            tk.previousToken();
+        }
+
         nameVal.Value = parseValueLiteral(tk);
 
         return nameVal;
@@ -601,14 +607,22 @@ public class Parser {
                 current_token = "''";
                 return current_token;
             }else{
-                //tk.setTokenIndex(tk.getCurrent_token_index() - 1);
+
                 tk.previousToken();
             }
 
             while(!tk.nextToken().equals("'") && tk.hasMoreTokens()) {
                 current_token += tk.getCurrentToken();
-                current_token += " ";
+                if(!tk.getCurrentToken().equals(".")){
+                    current_token += " ";
+                }
             }
+
+            if(current_token.contains(".")){
+                current_token=current_token.replaceAll("\\s+", "");
+            }
+
+            current_token = current_token.trim();
 
             if(!tk.hasMoreTokens()){
                 throw new Exception("Parse Fail - paseValueLiteral");
@@ -635,6 +649,10 @@ public class Parser {
         current_token = parseIntegerLiteral(tk);
         if(!current_token.isEmpty()){
             return current_token;
+        }
+
+        if(current_token.isEmpty()){
+            throw new Exception("Value provided does not conform to value grammar");
         }
 
         return current_token;
