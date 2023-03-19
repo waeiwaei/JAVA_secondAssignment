@@ -21,7 +21,7 @@ public class DBServer {
         //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive' AND age == 3;";
         //String command = "UPDATE marks SET mark = 55, pass = FALSE WHERE name == 'Dave' OR id == 3;";
         //String command = "DELETE FROM marks WHERE mark == 55;";
-        //String command = "ALTER TABLE marks ADD percentage;";
+        //String command = "ALTER TABLE customers DROP name;";
         //String command = "ALTER TABLE marks DROP name;";
         //String command = "SELECT marks.id, marks.name, marks.mark FROM marks WHERE id > 1 AND id < 3;";
         //String command = "SELECT * FROM marks where name == 'steve';";
@@ -37,7 +37,7 @@ public class DBServer {
         //String command = "INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);";
         //String command = "insert into customers values('name', age, e93);";
 //        String command = "Join orders and customers on customerId and id;";
-//////
+////////
 //        String valueReturn="";
 //
 //        try{
@@ -47,7 +47,7 @@ public class DBServer {
 //            System.out.println("went through parser");
 //
 //
-//            pr = new Process(value);
+//            pr = new Process(value, "/home/waei/OOP_Java/secondAssignment/07 Briefing on DB assignment/resources/cw-db/databases");
 //            valueReturn = pr.query();
 //            System.out.println(valueReturn);
 //
@@ -91,7 +91,7 @@ public class DBServer {
             Parser p = new Parser();
             DBCmd value = p.parse(tokenCommands);
 
-            pr = new Process(value);
+            pr = new Process(value, storageFolderPath);
             valueReturn = pr.query();
 
         }catch(Exception e){

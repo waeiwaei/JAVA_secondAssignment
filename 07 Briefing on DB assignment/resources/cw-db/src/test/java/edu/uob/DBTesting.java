@@ -434,29 +434,12 @@ public class DBTesting {
         File f1 = new File(storageFolderPath+fileSeparator+databaseName+fileSeparator+customersTable + ".tab");
         assertTrue(f1.exists(), "Table was not created in the " + databaseName +" database directory properly");
 
-        response = sendCommandToServer("create table " + ordersTable + "(customerId , product, quantity, price);");
-        assertTrue(response.contains("[OK]"), "unable to create table - ordersTable");
-
-        File f2 = new File(storageFolderPath+fileSeparator+databaseName+fileSeparator+ordersTable +".tab");
-        assertTrue(f2.exists(), "Table was not created in the " + ordersTable +" database directory properly");
-
-
-
-
 
         sendCommandToServer("use "+ databaseName +";");
         sendCommandToServer("INSERT INTO customers VALUES ('Alice', 'alice@example.com', 073849392);");
         sendCommandToServer("INSERT INTO customers VALUES ('Bob', 'bob@example.com', 389489322);");
         sendCommandToServer("INSERT INTO customers VALUES ('Charlie', 'charlie@example.com', 23232121);");
         sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);");
-
-
-
-        response = sendCommandToServer("INSERT INTO orders VALUES (1, 'Apple', 2, 3);");
-        sendCommandToServer("INSERT INTO orders VALUES (2, 'Banana', 22, 4.00);");
-        sendCommandToServer("INSERT INTO orders VALUES (3, 'Orange', 9, 7.00);");
-        sendCommandToServer("INSERT INTO orders VALUES (4, 'Pineapple', 1, 10.00);");
-        sendCommandToServer("INSERT INTO orders VALUES (5, 'Mango', 34, 11.00);");
 
 
 
@@ -475,6 +458,13 @@ public class DBTesting {
 
         response = sendCommandToServer("Select * from " +customersTable+";");
         assertTrue(!response.contains("attribute1"), "alter - add should have added new column to the table");
+
+        //test drop
+        response = sendCommandToServer("alter table "+customersTable+" drop name;");
+        assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
+
+        response = sendCommandToServer("Select * from " +customersTable+";");
+        assertTrue(!response.contains("name"), "alter - add should have added new column to the table");
 
         //test add - attribute name as keyword (error)
         response = sendCommandToServer("alter table "+customersTable+" add join;");

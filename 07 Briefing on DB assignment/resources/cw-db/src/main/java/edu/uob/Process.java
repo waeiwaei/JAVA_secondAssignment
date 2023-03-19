@@ -4,16 +4,20 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.util.jar.Attributes;
 
 public class Process {
 
     static String database;
     static String fileSeparator = File.separator;
-    static String storageFolderPath = (".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator);
+    static String storageFolderPath;
     DBCmd dbcmd;
 
-    public Process(DBCmd dbstate){
+    public Process(DBCmd dbstate, String folderpath){
+
         this.dbcmd = dbstate;
+        this.storageFolderPath = folderpath + fileSeparator;
+
     }
 
     public String query() throws Exception {
@@ -85,7 +89,7 @@ public class Process {
         dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
 
         //check table name with keyword - FROM, JOIN, DELETE, DROP, USE, SELECT, UPDATE, ALTER
-        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
+        String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File f = new File(filePath);
 
 
@@ -156,7 +160,7 @@ public class Process {
 
         dbcmd.DBName = dbcmd.DBName.toLowerCase();
 
-        String folderPath = storageFolderPath+fileSeparator+dbcmd.DBName;
+        String folderPath = storageFolderPath+dbcmd.DBName;
         File folder = new File(folderPath);
 
         if(!folder.exists()){
@@ -175,7 +179,7 @@ public class Process {
 
     private String updateCMD() throws Exception{
 
-        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0) + ".tab";
+        String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0) + ".tab";
         File f = new File(filePath);
         FileInputStream fl = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
@@ -284,7 +288,7 @@ public class Process {
         ArrayList<String>  attributeList = new ArrayList<String>();
 
         //get the table path
-        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
+        String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File f = new File(filePath);
         if(!f.exists())
             return "[ERROR]";
@@ -445,27 +449,37 @@ public class Process {
 
     private String alterCMD() throws Exception {
 
-        String filePath = storageFolderPath + fileSeparator + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
+        String filePath = storageFolderPath + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
 
         File f = new File(filePath);
         FileInputStream fl = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
 
-        ArrayList<String> attributeList = new ArrayList<String>();
         String attribute = br.readLine();
+
         String attlist[]  = attribute.split("\t");
+        ArrayList<String> attributeList = new ArrayList<String>(Arrays.asList(attlist));
 
-        ArrayList<String>entries = new ArrayList<String>();
+        //String attribute = br.readLine();
+//        String attlist[]  = attribute.split("\t");
+//
+//        ArrayList<String> attributeList = new ArrayList<String>(Arrays.asList(attlist));
+        //ArrayList<String>entries = new ArrayList<String>();
+        ArrayList<String>entries = readEntries(br);
 
-        while(attribute != null){
-            attribute = br.readLine();
-            entries.add(attribute);
-        }
 
+        //
+//        while(attribute != null){
+//            attribute = br.readLine();
+//            entries.add(attribute);
+//        }
 
-        for(int i = 0; i < attlist.length; i++){
-            attributeList.add(attlist[i]);
-        }
+        //ArrayList<String> entries = readEntries(br);
+//
+//
+//        for(int i = 0; i < attlist.length; i++){
+//            attributeList.add(attlist[i]);
+//        }
         br.close();
 
 
@@ -540,25 +554,24 @@ public class Process {
             String attributeDrop = dbcmd.colNames.get(0);
             int attDropIndex = attributeList.indexOf(attributeDrop);
 
-            String [][] entriesDel = new String[entries.size()-1][attributeList.size()];
+            String [][] entriesDel = new String[entries.size()][attributeList.size()];
             int row = 0;
             int in = 0;
 
 
-            while(entries.get(in) != null){
+            while(in < entries.size()){
 
                 String[] columnEntries = entries.get(in).split("\t");
                 for(int col = 0; col <columnEntries.length; col++){
-                    entriesDel[row][col] = columnEntries[col];
+                    entriesDel[in][col] = columnEntries[col];
                 }
 
                 in++;
-                row++;
             }
 
-            String[][] newArray = new String[entries.size()-1][attributeList.size()-1];
+            String[][] newArray = new String[entries.size()][attributeList.size()-1];
 
-            for (int i = 0; i < entries.size() - 1; i++) {
+            for (int i = 0; i < entries.size(); i++) {
                 int newColIdx = 0;
                 for (int j = 0; j < attributeList.size(); j++) {
                     if (j != attDropIndex) { // skip the 2nd column (index 1)
@@ -578,7 +591,7 @@ public class Process {
             bw.write("\n");
 
             //write new array to file
-            for(int i = 0; i < entries.size()-1; i++){
+            for(int i = 0; i < newArray.length; i++){
                 for(int j = 0; j < attributeList.size(); j++){
                     bw.write(newArray[i][j]);
                     bw.write("\t");
@@ -594,7 +607,7 @@ public class Process {
 
     private String insertCMD() throws IOException {
 
-        String filePath = storageFolderPath + fileSeparator + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
+        String filePath = storageFolderPath + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
 
         String idIndex = String.valueOf(checkIdIndex(filePath));
 
@@ -677,7 +690,7 @@ public class Process {
         String table2 = dbcmd.join.get(1).table;
 
         //buffered reader
-        String filePath1 = storageFolderPath+fileSeparator+database+fileSeparator+table1+".tab";
+        String filePath1 = storageFolderPath+database+fileSeparator+table1+".tab";
         File f1 = new File(filePath1);
 
         if(!f1.exists()){
@@ -687,7 +700,7 @@ public class Process {
         FileInputStream fl1 = new FileInputStream(f1);
         BufferedReader br1 = new BufferedReader(new InputStreamReader(fl1));
 
-        String filePath2 = storageFolderPath+fileSeparator+database+fileSeparator+table2+".tab";
+        String filePath2 = storageFolderPath+database+fileSeparator+table2+".tab";
         File f2 = new File(filePath2);
 
         if(!f2.exists()){
@@ -710,38 +723,44 @@ public class Process {
 
 
         //ArrayList<String> attrL1 -> Stores Attribute List of first Table
-        ArrayList<String> attrL1 = new ArrayList<String>();
+        ArrayList<String> attrL1 = new ArrayList<String>(Arrays.asList(a1));
+//
+//        for(int i = 0; i < a1.length; i++){
+//            attrL1.add(a1[i]);
+//        }
 
-        for(int i = 0; i < a1.length; i++){
-            attrL1.add(a1[i]);
-        }
 
         //ArrayList<String> attrL2 -> Stores Attribute List of second Table
-        ArrayList<String> attrL2 = new ArrayList<String>();
+        ArrayList<String> attrL2 = new ArrayList<String>(Arrays.asList(a2));
 
-        for(int i = 0; i < a2.length; i++){
-            attrL2.add(a2[i]);
-        }
+//        for(int i = 0; i < a2.length; i++){
+//            attrL2.add(a2[i]);
+//        }
 
         //ArrayList<String> entry1 -> Stores each entry of first Table
-        ArrayList<String> entry1 = new ArrayList<String>();
+        //ArrayList<String> entry1 = new ArrayList<String>();
 
-        String val1 = br1.readLine();
-
-        while(val1 != null) {
-            entry1.add(val1);
-            val1 = br1.readLine();
-        }
+//        String val1 = br1.readLine();
+//
+//        while(val1 != null) {
+//            entry1.add(val1);
+//            val1 = br1.readLine();
+//        }
+//
+        ArrayList<String> entry1 = readEntries(br1);
 
         //ArrayList<String> entry2 -> Stores each entry of second Table
-        ArrayList<String> entry2 = new ArrayList<String>();
+//        ArrayList<String> entry2 = new ArrayList<String>();
+//
+//        String val2 = br2.readLine();
+//
+//        while(val2 != null) {
+//            entry2.add(val2);
+//            val2 = br2.readLine();
+//        }
 
-        String val2 = br2.readLine();
+        ArrayList<String> entry2 = readEntries(br2);
 
-        while(val2 != null) {
-            entry2.add(val2);
-            val2 = br2.readLine();
-        }
 
         //index of the keys for tables to join
         int indatt1 = find(dbcmd.join.get(0).attributes, attrL1);
@@ -827,7 +846,7 @@ public class Process {
 
     private String dropTableCMD() {
 
-        String filePath = storageFolderPath+fileSeparator+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
+        String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File fl = new File(filePath);
 
         if(fl.exists()){
@@ -841,7 +860,7 @@ public class Process {
 
     private String dropDatabaseCMD() {
 
-        String folderPath = storageFolderPath+fileSeparator+dbcmd.DBName;
+        String folderPath = storageFolderPath+dbcmd.DBName;
         File folder = new File(folderPath);
 
         if(folder.exists()) {
@@ -880,7 +899,7 @@ public class Process {
     }
 
     private String useCMD() {
-        String folderPath = storageFolderPath+fileSeparator+dbcmd.DBName;
+        String folderPath = storageFolderPath+dbcmd.DBName;
         File folder = new File(folderPath);
 
         if(folder.exists()) {
@@ -898,7 +917,7 @@ public class Process {
         String table = dbcmd.TableNames.get(0);
 
         //buffered reader
-        String filePath1 = storageFolderPath+fileSeparator+database+fileSeparator+table+".tab";
+        String filePath1 = storageFolderPath+database+fileSeparator+table+".tab";
         File f1 = new File(filePath1);
 
         if(!f1.exists()){
@@ -1366,5 +1385,19 @@ public class Process {
 
         return attributeList.indexOf(attName.toLowerCase());
     }
+
+    public ArrayList<String> readEntries (BufferedReader br) throws IOException {
+        ArrayList<String> attributelist = new ArrayList<String>();
+
+        String val1 = br.readLine();
+
+        while(val1 != null) {
+            attributelist.add(val1);
+            val1 = br.readLine();
+        }
+
+        return attributelist;
+    }
+
 
 }
