@@ -545,7 +545,7 @@ public class DBTesting {
 
 
 
-        //update conditions with 2 conditions
+        //update 2 fields
         response = sendCommandToServer("Select name,phone from customers where id <= 3;");
         results = response.split("\n");
 
