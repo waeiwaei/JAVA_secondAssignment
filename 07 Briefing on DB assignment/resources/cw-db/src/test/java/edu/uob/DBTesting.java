@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.lang.reflect.Array;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -567,12 +568,64 @@ public class DBTesting {
     }
 
 
-//    @Test
-//    public void testWhere(){
-//
-//    }
-//
-//
+    @Test
+    public void testWhere(){
+
+        String databaseName = generateRandomName();
+
+        sendCommandToServer("Create database "+databaseName+";");
+        sendCommandToServer("use "+ databaseName +";");
+        sendCommandToServer("Create table customers(name,email,phone);");
+        sendCommandToServer("INSERT INTO customers VALUES ('Alice', 'alice@example.com', 073849392);");
+        sendCommandToServer("INSERT INTO customers VALUES ('Bob', 'bob@example.com', 389489322);");
+        sendCommandToServer("INSERT INTO customers VALUES ('Charlie', 'charlie@example.com', 23232121);");
+        sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);");
+
+        //update specific fields based on condition - or nested conditions
+        String response = sendCommandToServer("UPDATE customers SET phone = 212 where name == 'Alice' AND email LIKE 'a';");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+
+        response = sendCommandToServer("Select name from customers where phone == 212;");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+
+        String results [] = response.split("\n");
+
+        ArrayList<String> entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.get(0).equals("Alice"), "Select should only change the first record values");
+
+        response = sendCommandToServer("UPDATE customers SET phone = 456 where name == 'Alice' OR email LIKE '@';");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+        response = sendCommandToServer("Select name from customers where phone == 456;");
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.size() == 4, "The query should have changed all the values of the phone as the where condition is satisfied by all conditions");
+
+        response = sendCommandToServer("UPDATE customers SET phone = 789 where id < 3 AND name LIKE 'B';");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+        response = sendCommandToServer("Select name from customers where phone == 789;");
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+
+        assertTrue(entriesResult.size() == 1, "The query should have changed all the values of the phone as the where condition is satisfied by all conditions");
+        assertTrue(entriesResult.get(0).equals("Bob"), "Query was supposed to only change the value for one field");
+
+    }
 
 
 }
