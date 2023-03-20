@@ -7,6 +7,11 @@ public class Parser {
 
     private DBCmd dbstate;
 
+    int opening_brackets;
+
+    int closing_brackets;
+
+
     public Parser(){
         dbstate = new DBCmd();
     }
@@ -155,6 +160,10 @@ public class Parser {
         dbstate.conditions = new ArrayList<Condition>();
         dbstate.conditions.add(parseCondition(tk));
 
+        if(tk.getCurrentToken().equals(")")){
+            tk.nextToken();
+        }
+
         return true;
     }
 
@@ -181,6 +190,9 @@ public class Parser {
             throw new Exception("Parse Failed - parseSelect");
         }
 
+        if(tk.getCurrentToken().equals(")")){
+            tk.nextToken();
+        }
 
         return;
     }
@@ -334,6 +346,10 @@ public class Parser {
         dbstate.conditions = new ArrayList<Condition>();
         dbstate.conditions.add(parseCondition(tk));
 
+        if(tk.getCurrentToken().equals(")")){
+            tk.nextToken();
+        }
+
     }
 
 
@@ -459,24 +475,13 @@ public class Parser {
     private Condition parseCondition(Tokenizer tk) throws Exception {
         Condition result = null;
 
-        if (tk.getCurrentToken().equals(")")) {
-            return null;
-        }
-
         if (tk.hasMoreTokens()) {
             String token = tk.nextToken();
             if (token.equals("(")) {
                 // parse sub-expression
-                Condition leftCondition = parseCondition(tk);
-                String boolOperator = parseBoolOperator(tk.getCurrentToken());
-                Condition rightCondition = parseCondition(tk);
+                opening_brackets++;
+                result = parseCondition(tk);
 
-                // combine sub-expressions
-                Condition condition = new Condition();
-                condition.cnd1 = leftCondition;
-                condition.cnd2 = rightCondition;
-                condition.boolOperator = boolOperator;
-                result = condition;
             } else {
 
                 tk.previousToken();
@@ -515,6 +520,26 @@ public class Parser {
                     result = condition;
                 }
             }
+        }
+
+        if(tk.getCurrentToken().equals(")")){
+            closing_brackets++;
+        }
+
+        if(tk.getCurrentToken().equals(";")){
+            if(opening_brackets != closing_brackets){
+                throw new Exception("Opening and closing Brackets missing");
+            }
+            return result;
+        }
+
+        String tok = tk.nextToken();
+        if(tok.equalsIgnoreCase("AND") || tok.equalsIgnoreCase("OR")){
+            Condition cond = new Condition();
+            cond.cnd1 = result;
+            cond.boolOperator = tk.getCurrentToken();
+            cond.cnd2 = parseCondition(tk);
+            result = cond;
         }
 
         if (result != null) {

@@ -151,11 +151,9 @@ public class Process {
         String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
 
         for(int i = 0; i < keywords.length; i++){
-
             if (keywords[i].equalsIgnoreCase(dbcmd.DBName)) {
                 return "[ERROR] - cannot database from keyword";
             }
-
         }
 
         dbcmd.DBName = dbcmd.DBName.toLowerCase();
@@ -605,13 +603,18 @@ public class Process {
         return "[OK]\n";
     }
 
-    private String insertCMD() throws IOException {
+    private String insertCMD() throws Exception {
 
         String filePath = storageFolderPath + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
 
         String idIndex = String.valueOf(checkIdIndex(filePath));
 
         File f1 = new File(filePath);
+
+        if(!f1.exists()){
+            throw new Exception("Table does not exist");
+        }
+
         FileReader fr = new FileReader(f1);
         BufferedReader br = new BufferedReader(fr);
 
@@ -921,7 +924,7 @@ public class Process {
         File f1 = new File(filePath1);
 
         if(!f1.exists()){
-            return "[ERROR]\n";
+            return "[ERROR] - table does not exist\n";
         }
 
         FileInputStream fl1 = new FileInputStream(f1);
@@ -1397,6 +1400,12 @@ public class Process {
         }
 
         return attributelist;
+    }
+
+    public boolean checkKeywords(String input){
+
+
+        return true;
     }
 
 

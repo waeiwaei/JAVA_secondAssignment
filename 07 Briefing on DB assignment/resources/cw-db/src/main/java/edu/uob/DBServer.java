@@ -19,11 +19,12 @@ public class DBServer {
 
         //tokenize commands from user
         //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive' AND age == 3;";
-        //String command = "UPDATE marks SET mark = 55, pass = FALSE WHERE name == 'Dave' OR id == 3;";
-        //String command = "DELETE FROM marks WHERE mark == 55;";
+        //String command = "UPDATE marks SET mark = 55, pass = FALSE WHERE ((mark == 55 AND name == 'Dave') OR id == 1) OR id == 3);";
+        //String command = "DELETE FROM marks WHERE ((mark == 55 AND name == 'Dave') OR id == 1) OR id == 3);";
         //String command = "ALTER TABLE customers DROP name;";
         //String command = "ALTER TABLE marks DROP name;";
-        //String command = "SELECT marks.id, marks.name, marks.mark FROM marks WHERE id > 1 AND id < 3;";
+        //String command = "SELECT marks.id, marks.name, marks.mark FROM marks WHERE (((mark == 55 AND name == 'Dave') OR id == 1) OR id == 3);";
+        String command = "SELECT marks.id, marks.name, marks.mark FROM marks WHERE ((id == 3 and mark == 35) OR id == 1) or (name == 'Dave');";
         //String command = "SELECT * FROM marks where name == 'steve';";
         //String command = "SELECT * FROM marks WHERE name == 'Dave' AND mark == 55;";
         //String command = "CREATE TABLE marks (                        hello.name, mark, pass);";
@@ -38,8 +39,8 @@ public class DBServer {
         //String command = "insert into customers values('name', age, e93);";
 //        String command = "Join orders and customers on customerId and id;";
 ////////
-//        String valueReturn="";
-//
+        String valueReturn="";
+
 //        try{
 //            Tokenizer tokenCommands = new Tokenizer(command);
 //            Parser p = new Parser();
@@ -49,7 +50,7 @@ public class DBServer {
 //
 //            pr = new Process(value, "/home/waei/OOP_Java/secondAssignment/07 Briefing on DB assignment/resources/cw-db/databases");
 //            valueReturn = pr.query();
-//            System.out.println(valueReturn);
+//                System.out.println(valueReturn);
 //
 //        }catch(Exception e){
 //            valueReturn="[ERROR]\n";

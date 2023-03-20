@@ -188,20 +188,27 @@ public class DBTesting {
         File f1 = new File(storageFolderPath+fileSeparator+databaseName+fileSeparator+customersTable + ".tab");
         assertTrue(f1.exists(), "Table was not created in the " + databaseName +" database directory properly");
 
-        response = sendCommandToServer("create table " + ordersTable + "(customerId , product, quantity, price);");
-        assertTrue(response.contains("[OK]"), "unable to create table - ordersTable");
+        response = sendCommandToServer("create table " + ordersTable + "(customerId , delete, quantity, price);");
+        assertTrue(response.contains("[ERROR]"), "unable to create table - due to attribute name being a keyword (delete)");
 
         File f2 = new File(storageFolderPath+fileSeparator+databaseName+fileSeparator+ordersTable +".tab");
-        assertTrue(f2.exists(), "Table was not created in the " + ordersTable +" database directory properly");
+        assertTrue(!f2.exists(), "Table was not created in the " + ordersTable +" database directory properly");
 
 
 
         //not allowed to make multiple tables or databases
-        response = sendCommandToServer("create database " + databaseName + "(customerId , product, quantity, price);");
+        response = sendCommandToServer("create database " + databaseName +";");
         assertTrue(response.contains("[ERROR]"), "no duplicate database allowed to be created");
 
-        response = sendCommandToServer("create table " + ordersTable + "(customerId , product, quantity, price);");
-        assertTrue(response.contains("[ERROR]"), "no duplicate tables allowed to be created");
+
+
+        //not allowed to make database or table name with key word
+        response = sendCommandToServer("create database join;");
+        assertTrue(response.contains("[ERROR]"), "database created however - not allowed to create database with keyword");
+
+        response = sendCommandToServer("create table create (customerId , product, quantity, price);");
+        assertTrue(response.contains("[ERROR]"), "table created however - not allowed to create database with keyword");
+
     }
 
 
@@ -581,16 +588,31 @@ public class DBTesting {
         sendCommandToServer("INSERT INTO customers VALUES ('Charlie', 'charlie@example.com', 23232121);");
         sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);");
 
+        //update with one condition
+        String response = sendCommandToServer("UPDATE customers SET name = 'Bryan' where id == 1;");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+        response = sendCommandToServer("Select name from customers where id == 1;");
+
+        String results [] = response.split("\n");
+
+        ArrayList<String> entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.get(0).equals("Bryan"), "Select should only change the first record values");
+        sendCommandToServer("UPDATE customers SET name = 'Alice' where name == 'Bryan';");
+
         //update specific fields based on condition - or nested conditions
-        String response = sendCommandToServer("UPDATE customers SET phone = 212 where name == 'Alice' AND email LIKE 'a';");
+        response = sendCommandToServer("UPDATE customers SET phone = 212 where name == 'Alice' AND email LIKE 'a';");
         assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
 
         response = sendCommandToServer("Select name from customers where phone == 212;");
         assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
 
-        String results [] = response.split("\n");
+        results = response.split("\n");
 
-        ArrayList<String> entriesResult = new ArrayList<String>();
+        entriesResult = new ArrayList<String>();
         for(int i = 2; i < results.length; i++){
             entriesResult.add(results[i].trim());
         }
@@ -624,6 +646,133 @@ public class DBTesting {
 
         assertTrue(entriesResult.size() == 1, "The query should have changed all the values of the phone as the where condition is satisfied by all conditions");
         assertTrue(entriesResult.get(0).equals("Bob"), "Query was supposed to only change the value for one field");
+
+        response = sendCommandToServer("UPDATE customers SET phone = 11111 where id < 3;");
+        response = sendCommandToServer("Select name from customers where phone == 11111;");
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.size() == 2, "only two entries match the select condition");
+        assertTrue(entriesResult.get(0).equals("Alice"), "(Alice, id == 1), was supposed to change to phone = 11111");
+        assertTrue(entriesResult.get(1).equals("Bob"), "(Bob, id == 2), was supposed to change to phone = 11111");
+
+
+        //use 2 conditions
+        response = sendCommandToServer("UPDATE customers SET phone = 2293 where id < 3 and name == 'Bob';");
+        response = sendCommandToServer("Select name from customers where phone == 2293;");
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.size() == 1, "only one entry matches the select condition");
+        assertTrue(entriesResult.get(0).equals("Bob"), "(Bob) first return name entry, with the phone == 2293 was not updated properly");
+
+
+
+        response = sendCommandToServer("UPDATE customers SET phone = 8888 where id == 4 OR name == 'Alice';");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+        response = sendCommandToServer("Select name from customers where phone == 8888;");
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.size() == 2, "only two entries match the select condition");
+        assertTrue(entriesResult.get(0).equals("Alice"), "(Alice) first return name entry, with the phone == 8888 was not updated properly");
+        assertTrue(entriesResult.get(1).equals("dave"), "(dave) first return name entry, with the phone == 8888 was not updated properly");
+
+
+
+        //use nested conditions
+        response = sendCommandToServer("UPDATE customers SET phone = 2323 where (id < 3 AND name == 'Alice');");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+        response = sendCommandToServer("Select name from customers where phone == 2323;");
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+
+        assertTrue(entriesResult.size() == 1, "only one entry match the select condition");
+        assertTrue(entriesResult.get(0).equals("Alice"), "(Alice) return name entry, with the phone == 2323 was not updated properly");
+
+
+        response = sendCommandToServer("UPDATE customers SET phone = 9090 where (name LIKE 'a' AND id > 3) OR id == 1 ;");
+        response = sendCommandToServer("Select name from customers where phone == 9090;");
+
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+
+        assertTrue(entriesResult.size() == 2, "only two entries match the select condition");
+        assertTrue(entriesResult.get(0).equals("Alice"), "(Alice) first return name entry, with the phone == 9090 was not updated properly");
+        assertTrue(entriesResult.get(1).equals("dave"), "(dave) first return name entry, with the phone == 9090 was not updated properly");
+
+
+        response = sendCommandToServer("UPDATE customers SET phone = 1221 where (name LIKE 'A') AND (id == 1) ;");
+        response = sendCommandToServer("Select name from customers where phone == 1221;");
+
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.size() == 1, "only one entry matches the select condition");
+        assertTrue(entriesResult.get(0).equals("Alice"), "Return should be 'Alice', with the update condition changing the value of the phone");
+
+
+
+
+        //update with no attribute found
+        response = sendCommandToServer("UPDATE customers SET phone = 4567 where occupation = 'doctor';");
+        assertTrue(response.contains("[ERROR]"), "Was supposed to return an [ERROR], if attribute name is not found");
+        response = sendCommandToServer("Select name from customers where phone == 4567;");
+
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.size() == 0, "supposed to return no entries that match the select statement condition");
+
+
+
+
+        //test invalid statements - with brackets
+        response = sendCommandToServer("UPDATE customers SET phone = 9090 where (((name LIKE 'a' AND id > 3) OR id == 1;");
+        assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
+
+        response = sendCommandToServer("UPDATE customers SET phone = 9090 where (((name LIKE 'a' AND id > 3))))) OR id == 1);");
+        assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
+
+        //response = sendCommandToServer("UPDATE customers SET phone = 9090 where (name LIKE 'a' AND id > 3 OR id == 1)));");
+        //System.out.println(response);
+        //assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
 
     }
 
