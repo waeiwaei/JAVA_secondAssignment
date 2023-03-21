@@ -9,6 +9,7 @@ import java.util.jar.Attributes;
 
 public class Process {
 
+    //static String database = "rhngugxcqc";
     static String database;
     static String fileSeparator = File.separator;
     static String storageFolderPath;
@@ -273,6 +274,10 @@ public class Process {
         //write entries back into the file
         for(int k = 0; k < entries.size(); k++){
             for(int y = 0; y < attributeList.size(); y++){
+                if(updEntries[k][y] == null){
+                    break;
+                }
+
                 bw.write(updEntries[k][y]);
                 bw.write("\t");
             }
@@ -488,6 +493,10 @@ public class Process {
 
             String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
 
+            //for each row, we want to create a new string with the original values and with the + ("\t"+"")
+            //result += String.join("\t", arr1) + "\t" + String.join("\t", arr2) + "\n";
+
+
             for(int i = 0; i < keywords.length; i++){
                 if(keywords[i].equalsIgnoreCase(dbcmd.colNames.get(0))){
 
@@ -529,16 +538,14 @@ public class Process {
                 bw.write("\t");
             }
 
-            bw.write("\n");
-
             //populate entries
             for(int i = 0; i < entries.size(); i++){
                 if(entries.get(i) == null){
                     break;
                 }
-
-                bw.write(entries.get(i));
                 bw.write("\n");
+                bw.write(String.join("\t", entries.get(i) + " "));
+                //bw.write("\n");
             }
 
             bw.close();
@@ -584,6 +591,7 @@ public class Process {
                 bw.write(attributeList.get(i));
                 bw.write("\t");
             }
+
             bw.write("\n");
 
             //write new array to file
@@ -604,11 +612,9 @@ public class Process {
     private String insertCMD() throws Exception {
 
         String filePath = storageFolderPath + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
-
         String idIndex = String.valueOf(checkIdIndex(filePath));
 
         File f1 = new File(filePath);
-
         if(!f1.exists()){
             throw new Exception("Table does not exist");
         }
@@ -617,20 +623,15 @@ public class Process {
         BufferedReader br = new BufferedReader(fr);
 
         String attributeList [] = br.readLine().split("\t");
+
+        ArrayList<String> entries = readEntries(br);
         int numberAttributes = attributeList.length - 1;
 
-        String nextline = br.readLine();
-        boolean flagEmpty = false;
-
-        //if(nextline == null){
-            flagEmpty = true;
-        //}
 
         br.close();
 
-
         File f = new File(filePath);
-        FileWriter fl = new FileWriter(f, true);
+        FileWriter fl = new FileWriter(f);
         BufferedWriter bw = new BufferedWriter(fl);
 
         if (dbcmd.values.size() != 0 && dbcmd.values.size() == numberAttributes) {
@@ -638,13 +639,7 @@ public class Process {
             if (!f.exists()) {
                 System.out.println("Table not created");
             } else if (f.exists()) {
-
-                //if(flagEmpty != true){
-                    bw.newLine();
-                //}
-
-                bw.write(idIndex);
-                bw.write("\t");
+                  String newInsert = idIndex + "\t";
 
                 for (int i = 0; i < dbcmd.values.size(); i++) {
 
@@ -653,9 +648,40 @@ public class Process {
                         dbcmd.values.set(i, dbcmd.values.get(i).replace("+" ,""));
                     }
 
-                    bw.write(dbcmd.values.get(i));
+                    newInsert += dbcmd.values.get(i) + "\t";
+                }
+
+                entries.add(newInsert);
+
+                //write attribute list
+                for(int i = 0; i < attributeList.length; i++){
+                    bw.write(attributeList[i]);
                     bw.write("\t");
                 }
+
+                bw.write("\n");
+
+                //write entries back to file
+                for(int i = 0; i < entries.size(); i++){
+                    bw.write(entries.get(i));
+                    bw.write("\n");
+                }
+
+//                bw.newLine();
+//
+//                bw.write(idIndex);
+//                bw.write("\t");
+//
+//                for (int i = 0; i < dbcmd.values.size(); i++) {
+//
+//                    //find if there is a "+" then we remove it
+//                    if(dbcmd.values.get(i).contains("+")){
+//                        dbcmd.values.set(i, dbcmd.values.get(i).replace("+" ,""));
+//                    }
+//
+//                    bw.write(dbcmd.values.get(i));
+//                    bw.write("\t");
+//                }
 
             }
             bw.close();
@@ -1079,7 +1105,7 @@ public class Process {
     private boolean equalCom(int index, String nextLine, String value) throws Exception {
 
         String x = nextLine.split("\t")[index].trim();
-        value  = value.trim();
+        value = value.trim();
 
         try {
             // Try to convert the string to an integer
@@ -1123,6 +1149,16 @@ public class Process {
         }
 
 
+        try{
+
+            if(x.equalsIgnoreCase(" ") && value == null){
+                return true;
+            }
+
+            return false;
+        }catch(NullPointerException e){
+
+        }
         return false;
 
     }

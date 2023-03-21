@@ -22,7 +22,7 @@ public class DBServer {
 
     public static void main(String args[]) throws IOException {
 
-//        String command = "Select                 name from people where name ==      'Steve';";
+//        String command = "alter table customers drop attribute1;";
 //
 //        String valueReturn = "";
 //
@@ -35,7 +35,7 @@ public class DBServer {
 //
 //            pr = new Process(value, "/home/waei/OOP_Java/secondAssignment/07 Briefing on DB assignment/resources/cw-db/databases");
 //            valueReturn = pr.query();
-//                System.out.println(valueReturn);
+//            System.out.println(valueReturn);
 //
 //        }catch(Exception e){
 //            valueReturn="[ERROR]\n";

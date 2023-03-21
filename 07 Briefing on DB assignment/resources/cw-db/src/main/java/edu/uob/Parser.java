@@ -524,9 +524,9 @@ public class Parser {
 
             cnd.cnd1.value = parseValueLiteral(tk);
 
-            if(cnd.cnd1.value.isEmpty()){
-                throw new Exception("Parse Failed - attribute value expected");
-            }
+//            if(cnd.cnd1.value.isEmpty()){
+//                throw new Exception("Parse Failed - attribute value expected");
+//            }
 
             String bool = parseBoolOperator(tk.nextToken());
             if(!bool.isEmpty()){
@@ -747,6 +747,15 @@ public class Parser {
 
         current_token = parseIntegerLiteral(tk);
         if(!current_token.isEmpty()){
+            return current_token;
+        }
+
+
+        //check if token is equal to null
+        //should return null and save it into the literal if ""
+        if(tk.getCurrentToken().equalsIgnoreCase("null")){
+            current_token = " ";
+            //current_token = null;
             return current_token;
         }
 

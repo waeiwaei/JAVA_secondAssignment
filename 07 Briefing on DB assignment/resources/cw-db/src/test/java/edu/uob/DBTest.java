@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.lang.reflect.Array;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -173,7 +174,7 @@ public class DBTest {
 
         String databaseName = generateRandomName();
 
-        /*        //create database*/
+        //create database
         String response = sendCommandToServer("create database " + databaseName + ";");
         assertTrue(response.contains("[OK]"), "unable to create database");
 
@@ -183,7 +184,7 @@ public class DBTest {
 
         sendCommandToServer("use "+ databaseName + ";");
 
-        /*        //create table*/
+        //create table
         String customersTable = "customers";
         String ordersTable = "orders";
 
@@ -283,6 +284,21 @@ public class DBTest {
         sendCommandToServer("INSERT INTO customers VALUES ('Bob', 'bob@example.com', 389489322);");
         sendCommandToServer("INSERT INTO customers VALUES ('Charlie', 'charlie@example.com', 23232121);");
         sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);");
+        response = sendCommandToServer("select * from customers;");
+
+        String result [] = response.split("\n");
+        ArrayList<String> entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
+        assertTrue(entries.size() == 4, "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(0).contains("Alice"), "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(1).contains("Bob"), "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(2).contains("Charlie"), "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(3).contains("dave"), "Insert query was supposed to add the following entries to the table orders");
+
 
 
 
@@ -291,6 +307,23 @@ public class DBTest {
         sendCommandToServer("INSERT INTO orders VALUES (3, 'Orange', 9, 7.00);");
         sendCommandToServer("INSERT INTO orders VALUES (4, 'Pineapple', 1, 10.00);");
         sendCommandToServer("INSERT INTO orders VALUES (5, 'Mango', 34, 11.00);");
+        response = sendCommandToServer("select * from orders;");
+
+        result = response.split("\n");
+        entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
+        assertTrue(entries.size() == 5, "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(0).contains("Apple"), "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(1).contains("Banana"), "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(2).contains("Orange"), "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(3).contains("Pineapple"), "Insert query was supposed to add the following entries to the table orders");
+        assertTrue(entries.get(4).contains("Mango"), "Insert query was supposed to add the following entries to the table orders");
+
+
 
         //if they enter more values than attributes, return an error?
         response = sendCommandToServer("INSERT INTO customers VALUES ('Cucumber', 5, 9, 23.00, 'Location')");
@@ -307,7 +340,7 @@ public class DBTest {
 
         String databaseName = generateRandomName();
 
-        /*        //create database*/
+        //create database
         String response = sendCommandToServer("create database " + databaseName + ";");
         assertTrue(response.contains("[OK]"), "unable to create database");
 
@@ -317,7 +350,7 @@ public class DBTest {
 
         sendCommandToServer("use "+ databaseName + ";");
 
-        /*        //create table*/
+        //create table
         String customersTable = "customers";
         String ordersTable = "orders";
 
@@ -332,7 +365,6 @@ public class DBTest {
 
         File f2 = new File(storageFolderPath+fileSeparator+databaseName+fileSeparator+ordersTable +".tab");
         assertTrue(f2.exists(), "Table was not created in the " + ordersTable +" database directory properly");
-
 
 
 
@@ -473,6 +505,35 @@ public class DBTest {
 
         assertTrue(entries.size() == 0, "No entries were expected to be returned, as there are no entries which match the condition");
 
+        //test with nested where conditions
+        response = sendCommandToServer("Select name from customers where ((id > 1 AND name == 'Bob') AND id <= 4) OR id == 3;");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+        assertTrue(response.contains("Bob"), "Select query should return Bob and Charlie only");
+        assertTrue(response.contains("Charlie"), "Select query should return Bob and Charlie only");
+        assertTrue(!response.contains("Alice"), "Select query should return Bob and Charlie only");
+        assertTrue(!response.contains("dave"), "Select query should return Bob and Charlie only");
+
+
+        response = sendCommandToServer("Select name from customers where ((phone like 7 AND name like 'A') AND id <= 4) OR id == 1;");
+        assertTrue(response.contains("Alice"), "Select query should return Bob and Charlie only");
+        assertTrue(!response.contains("Charlie"), "Select query should return Bob and Charlie only");
+        assertTrue(!response.contains("Bob"), "Select query should return Bob and Charlie only");
+        assertTrue(!response.contains("dave"), "Select query should return Bob and Charlie only");
+
+        response = sendCommandToServer("Select name from customers where ((id == 5 AND name == 'Bob') AND id <= 4) OR id == 5;");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+
+        result = response.split("\n");
+        entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
+        assertTrue(entries.size() == 0, "No entries were expected to be returned, as there are no entries which match the condition");
+
+
+        //test with nested where conditions - fail
     }
 
     @Test
@@ -880,8 +941,6 @@ public class DBTest {
 
         response = sendCommandToServer("UPDATE customers SET phone = 9090 where (name LIKE 'a' AND id > 3 OR id == 1)));");
         assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
-
-
 
     }
 
