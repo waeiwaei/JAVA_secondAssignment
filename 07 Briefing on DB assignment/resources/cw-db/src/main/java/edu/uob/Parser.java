@@ -2,6 +2,7 @@ package edu.uob;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Stack;
 
 public class Parser {
 
@@ -11,6 +12,7 @@ public class Parser {
 
     int closing_brackets;
 
+    Stack<String> stack = new Stack<String>();
 
     public Parser(){
         dbstate = new DBCmd();
@@ -29,9 +31,9 @@ public class Parser {
 
         String token = tk.getCurrentToken();
 
-        if(token.equals(")")){
-            token = tk.getCurrentToken();
-        }
+//        if(token.equals(")")){
+//            token = tk.getCurrentToken();
+//        }
 
         // Match ";" token
         if(!token.equals(";")){
@@ -161,7 +163,7 @@ public class Parser {
         dbstate.conditions.add(parseCondition(tk));
 
         if(tk.getCurrentToken().equals(")")){
-            tk.nextToken();
+            throw new Exception("Parse Failed - parseUpdate");
         }
 
         return true;
@@ -191,7 +193,7 @@ public class Parser {
         }
 
         if(tk.getCurrentToken().equals(")")){
-            tk.nextToken();
+            throw new Exception("Error");
         }
 
         return;
@@ -347,7 +349,7 @@ public class Parser {
         dbstate.conditions.add(parseCondition(tk));
 
         if(tk.getCurrentToken().equals(")")){
-            tk.nextToken();
+            throw new Exception("Parse Failed - parseDelete");
         }
 
     }
@@ -470,84 +472,156 @@ public class Parser {
         return token;
     }
 
+    //(A == b AND c == d) OR e == f)     ;
+    private Condition parseCondition(Tokenizer tk) throws  Exception{
 
+        Condition cnd = new Condition();
 
-    private Condition parseCondition(Tokenizer tk) throws Exception {
-        Condition result = null;
+        if(!tk.hasMoreTokens()){
+            throw new Exception("parseCondition - fail");
+        }
 
-        if (tk.hasMoreTokens()) {
-            String token = tk.nextToken();
-            if (token.equals("(")) {
-                // parse sub-expression
-                opening_brackets++;
-                result = parseCondition(tk);
+        if(tk.nextToken().equals("(")){
+            stack.push("(");
+            //Condition innerCond = new Condition();
+            cnd.cnd1 = parseCondition(tk);
 
-            } else {
+            String tok = tk.getCurrentToken();
 
+            if(stack.peek() == "(" && tok.equals(")")){
+                stack.pop();
+            }else{
+                throw new Exception ("parseCondition - Parse fail");
+            }
+
+            String bool = parseBoolOperator(tk.nextToken());
+            if(!bool.isEmpty()){
+
+                cnd.boolOperator = bool;
+                cnd.cnd2 = parseCondition(tk);
+
+                return cnd;
+
+            }else{
+
+                return cnd.cnd1;
+            }
+        }else{
+
+            cnd.cnd1 = new Condition();
+            tk.previousToken();
+            cnd.cnd1.attributeName = parseAttributeName(tk);
+
+            if(cnd.cnd1.attributeName.isEmpty()){
+                throw new Exception("Parse Failed - attribute value expected");
+            }
+
+            cnd.cnd1.comparator = parseComparator(tk.nextToken());
+
+            if(tk.nextToken().equals("'")){
                 tk.previousToken();
-                String attributeName = parseAttributeName(tk);
-                String comparator = parseComparator(tk.nextToken());
-
-                if(tk.nextToken().equals("'")){
-                    tk.previousToken();
-                }
-
-                String value = parseValueLiteral(tk);
-
-                Condition condition = new Condition();
-                condition.attributeName = attributeName;
-                condition.comparator = comparator;
-                condition.value = value;
-
-                if (tk.hasMoreTokens()) {
-                    String boolOperator = parseBoolOperator(tk.nextToken());
-
-                    if(boolOperator.isEmpty()){
-                        result = condition;
-                        return result;
-                    }
-
-                    Condition nextCondition = parseCondition(tk);
-
-                    // combine expressions
-                    Condition combinedCondition = new Condition();
-                    combinedCondition.cnd1 = condition;
-                    combinedCondition.cnd2 = nextCondition;
-                    combinedCondition.boolOperator = boolOperator;
-
-                    result = combinedCondition;
-                } else {
-                    result = condition;
-                }
             }
-        }
 
-        if(tk.getCurrentToken().equals(")")){
-            closing_brackets++;
-        }
+            cnd.cnd1.value = parseValueLiteral(tk);
 
-        if(tk.getCurrentToken().equals(";")){
-            if(opening_brackets != closing_brackets){
-                throw new Exception("Opening and closing Brackets missing");
+            if(cnd.cnd1.value.isEmpty()){
+                throw new Exception("Parse Failed - attribute value expected");
             }
-            return result;
+
+            String bool = parseBoolOperator(tk.nextToken());
+            if(!bool.isEmpty()){
+
+                cnd.boolOperator = bool;
+                cnd.cnd2 = parseCondition(tk);
+
+                return cnd;
+
+            }else{
+
+                return cnd.cnd1;
+            }
+
         }
 
-        String tok = tk.nextToken();
-        if(tok.equalsIgnoreCase("AND") || tok.equalsIgnoreCase("OR")){
-            Condition cond = new Condition();
-            cond.cnd1 = result;
-            cond.boolOperator = tk.getCurrentToken();
-            cond.cnd2 = parseCondition(tk);
-            result = cond;
-        }
-
-        if (result != null) {
-            return result;
-        } else {
-            throw new Exception("Parse Failed - parseCondition: invalid syntax");
-        }
     }
+
+
+//    private Condition parseCondition(Tokenizer tk) throws Exception {
+//        Condition result = null;
+//
+//        if (tk.hasMoreTokens()) {
+//            String token = tk.nextToken();
+//            if (token.equals("(")) {
+//                // parse sub-expression
+//                opening_brackets++;
+//                result = parseCondition(tk);
+//
+//            } else {
+//
+//                tk.previousToken();
+//                String attributeName = parseAttributeName(tk);
+//                String comparator = parseComparator(tk.nextToken());
+//
+//                if(tk.nextToken().equals("'")){
+//                    tk.previousToken();
+//                }
+//
+//                String value = parseValueLiteral(tk);
+//
+//                Condition condition = new Condition();
+//                condition.attributeName = attributeName;
+//                condition.comparator = comparator;
+//                condition.value = value;
+//
+//                if (tk.hasMoreTokens()) {
+//                    String boolOperator = parseBoolOperator(tk.nextToken());
+//
+//                    if(boolOperator.isEmpty()){
+//                        result = condition;
+//                        return result;
+//                    }
+//
+//                    Condition nextCondition = parseCondition(tk);
+//
+//                    // combine expressions
+//                    Condition combinedCondition = new Condition();
+//                    combinedCondition.cnd1 = condition;
+//                    combinedCondition.cnd2 = nextCondition;
+//                    combinedCondition.boolOperator = boolOperator;
+//
+//                    result = combinedCondition;
+//                } else {
+//                    result = condition;
+//                }
+//            }
+//        }
+//
+//        if(tk.getCurrentToken().equals(")")){
+//            closing_brackets++;
+//        }
+//
+//        if(tk.getCurrentToken().equals(";")){
+//            if(opening_brackets != closing_brackets){
+//                throw new Exception("Opening and closing Brackets missing");
+//            }
+//            return result;
+//        }
+//
+//        String tok = tk.nextToken();
+//        if(tok.equalsIgnoreCase("AND") || tok.equalsIgnoreCase("OR")){
+//            Condition cond = new Condition();
+//            cond.cnd1 = result;
+//            cond.boolOperator = tk.getCurrentToken();
+//            cond.cnd2 = parseCondition(tk);
+//            result = cond;
+//        }
+//
+//        if (result != null) {
+//            return result;
+//        } else {
+//            throw new Exception("Parse Failed - parseCondition: invalid syntax");
+//        }
+//    }
 
 
     private String parseComparator(String token) throws Exception{

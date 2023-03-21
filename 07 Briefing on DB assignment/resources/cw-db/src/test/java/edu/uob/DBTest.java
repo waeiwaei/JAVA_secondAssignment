@@ -9,15 +9,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.lang.reflect.Array;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 
-public class DBTesting {
+public class DBTest {
 
     static String fileSeparator = File.separator;
-    static String storageFolderPath = (".."+fileSeparator+"cw-db"+fileSeparator+"databases"+fileSeparator);
+    static String storageFolderPath;
     private DBServer server;
 
 
@@ -45,6 +44,8 @@ public class DBTesting {
     //Test grammar - [ERROR] tag is returned for code that causes error
     @Test
     public void testGrammarError(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+
         String response = sendCommandToServer("Create database test");
         assertTrue(response.contains("[ERROR]"), "Parse error - missing semicolon");
 
@@ -83,6 +84,7 @@ public class DBTesting {
 
     @Test
     public void testInvalidException(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
 
         String databaseName = generateRandomName();
         String databaseName1 = "Create";
@@ -129,6 +131,8 @@ public class DBTesting {
 
     @Test
     public void testDrop(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+
         String databaseName = generateRandomName();
 
         //drop table that exists
@@ -165,6 +169,7 @@ public class DBTesting {
 
     @Test
     public void testCreate(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
 
         String databaseName = generateRandomName();
 
@@ -214,6 +219,7 @@ public class DBTesting {
 
     @Test
     public void testUse(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
 
         String databaseName = generateRandomName();
 
@@ -238,6 +244,8 @@ public class DBTesting {
 
     @Test
     public void testInsert(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+
         String databaseName = generateRandomName();
 
         /*        //create database*/
@@ -295,6 +303,8 @@ public class DBTesting {
 
     @Test
     public void testJoin(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+
         String databaseName = generateRandomName();
 
         /*        //create database*/
@@ -335,7 +345,7 @@ public class DBTesting {
 
 
 
-        response = sendCommandToServer("INSERT INTO orders VALUES (1, 'Apple', 2, 3);");
+        sendCommandToServer("INSERT INTO orders VALUES (1, 'Apple', 2, 3);");
         sendCommandToServer("INSERT INTO orders VALUES (2, 'Banana', 22, 4.00);");
         sendCommandToServer("INSERT INTO orders VALUES (3, 'Orange', 9, 7.00);");
         sendCommandToServer("INSERT INTO orders VALUES (4, 'Pineapple', 1, 10.00);");
@@ -369,6 +379,7 @@ public class DBTesting {
 
     @Test
     public void testDelete() {
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
 
         String databaseName = generateRandomName();
 
@@ -414,15 +425,63 @@ public class DBTesting {
         //set back to original entries
         sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);");
 
+        //delete with nested conditions
+        response = sendCommandToServer("delete from " + customersTable + " where ((name == 'dave') AND id <= 4) OR name == 'Bob';");
+        assertTrue(response.contains("[OK]"), "Response should return [OK] with valid query made");
+        response = sendCommandToServer("Select name from "+customersTable+";");
+        assertTrue(!response.contains("dave"), "Response should return [OK] although no entry was found");
+        assertTrue(!response.contains("Bob"), "Response should return [OK] although no entry was found");
+
+
+        //test with invalid nested conditions - bracket mismatch issue
+        response = sendCommandToServer("delete from " + customersTable + " where ((name == 'dave') AND id <= 4) OR name == 'Bob');");
+        assertTrue(response.contains("[ERROR]"), "Response should return [ERROR] with invalid query made");
+
+        response = sendCommandToServer("delete from " + customersTable + " where (((name == 'dave') AND id <= 4) OR name == 'Bob';");
+        assertTrue(response.contains("[ERROR]"), "Response should return [ERROR] with invalid query made");
+
     }
 
+    @Test
+    public void testSelect(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+        String databaseName = generateRandomName();
 
+        String response = sendCommandToServer("create database " + databaseName + ";");
+
+        sendCommandToServer("use "+ databaseName +";");
+        sendCommandToServer("create table customers(name, email, phone);");
+        sendCommandToServer("INSERT INTO customers VALUES ('Alice', 'alice@example.com', 073849392);");
+        sendCommandToServer("INSERT INTO customers VALUES ('Bob', 'bob@example.com', 389489322);");
+        sendCommandToServer("INSERT INTO customers VALUES ('Charlie', 'charlie@example.com', 23232121);");
+        sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);");
+
+        //Select from table where no attribute name was identified in the table
+        response = sendCommandToServer("select nonExistentAttribute from customers;");
+        assertTrue(response.contains("[ERROR]"), "Was expecting an [ERROR] to be returned, however [OK] was returned");
+
+        //select from table where no entry matches the condition
+        response = sendCommandToServer("Select Name      from customers          where name == 'Steve';");
+        assertTrue(response.contains("[OK]"), "Valid query was provided, however [OK] was not returned");
+
+        String result [] = response.split("\n");
+        ArrayList<String> entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
+        assertTrue(entries.size() == 0, "No entries were expected to be returned, as there are no entries which match the condition");
+
+    }
 
     @Test
     public void testAlter(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+
         String databaseName = generateRandomName();
 
-        /*        //create database*/
+        //create database
         String response = sendCommandToServer("create database " + databaseName + ";");
         assertTrue(response.contains("[OK]"), "unable to create database");
 
@@ -432,7 +491,7 @@ public class DBTesting {
 
         sendCommandToServer("use "+ databaseName + ";");
 
-        /*        //create table*/
+        //create table
         String customersTable = "customers";
         String ordersTable = "orders";
 
@@ -482,9 +541,11 @@ public class DBTesting {
 
     @Test
     public void testUpdate(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+
         String databaseName = generateRandomName();
 
-        /*        //create database*/
+        //create database*/
         String response = sendCommandToServer("create database " + databaseName + ";");
         assertTrue(response.contains("[OK]"), "unable to create database");
 
@@ -494,9 +555,8 @@ public class DBTesting {
 
         sendCommandToServer("use "+ databaseName + ";");
 
-        /*        //create table*/
+        //create table
         String customersTable = "customers";
-        String ordersTable = "orders";
 
         response = sendCommandToServer("create table " + customersTable + " (name,email,phone);");
         assertTrue(response.contains("[OK]"), "unable to create table - marks");
@@ -572,11 +632,43 @@ public class DBTesting {
         assertTrue(entriesResult.get(2).equals("Bruce\t122"), "Should obtain only two entries - name & phone");
 
 
+
+
+        //perform more updates with nested where conditions
+        sendCommandToServer("use "+databaseName+";");
+        sendCommandToServer("Create table orders (customerid, product, quantity, price);");
+        sendCommandToServer("INSERT INTO orders VALUES (1, 'Apple', 2, 3);");
+        sendCommandToServer("INSERT INTO orders VALUES (2, 'Banana', 22, 4.00);");
+        sendCommandToServer("INSERT INTO orders VALUES (3, 'Orange', 9, 7.00);");
+        sendCommandToServer("INSERT INTO orders VALUES (4, 'Pineapple', 1, 10.00);");
+        sendCommandToServer("INSERT INTO orders VALUES (5, 'Mango', 34, 11.00);");
+
+
+        response = sendCommandToServer("Update orders set price = 10000 where ((product like 'B') AND  quantity < 50) OR id == 5;");
+        assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
+        response = sendCommandToServer("select product from orders where price != 10000;");
+        assertTrue(!response.contains("Banana"), "Update query was meant to update the price of Banana and Mango");
+        assertTrue(!response.contains("Mango"), "Update query was meant to update the price of Banana and Mango");
+
+
+        response = sendCommandToServer("Update orders set price = 2323 where ((product == 'Mango') AND  quantity == 35) OR (id > 1 AND id < 3);");
+        assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
+        response = sendCommandToServer("select product from orders where price == 2323;");
+        assertTrue(response.contains("Banana"), "Update query was meant to update the price of Banana and Mango");
+
+        response = sendCommandToServer("Update orders set quantity = 45 where ((product like 'a') AND  quantity < 30) AND ((id > 1 AND id <= 5) AND price == 2323);");
+        assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
+        response = sendCommandToServer("select product from orders where quantity == 45;");
+        assertTrue(response.contains("Banana"), "Update query was meant to update the price of Banana and Mango");
+
+
     }
 
 
     @Test
     public void testWhere(){
+        storageFolderPath = Paths.get("databases").toAbsolutePath().toString();
+
 
         String databaseName = generateRandomName();
 
@@ -712,7 +804,7 @@ public class DBTesting {
         assertTrue(entriesResult.get(0).equals("Alice"), "(Alice) return name entry, with the phone == 2323 was not updated properly");
 
 
-        response = sendCommandToServer("UPDATE customers SET phone = 9090 where (name LIKE 'a' AND id > 3) OR id == 1 ;");
+        response = sendCommandToServer("UPDATE customers SET phone = 9090 where ((name LIKE 'a' AND id > 3) OR id == 1) ;");
         response = sendCommandToServer("Select name from customers where phone == 9090;");
 
 
@@ -760,6 +852,19 @@ public class DBTesting {
 
         assertTrue(entriesResult.size() == 0, "supposed to return no entries that match the select statement condition");
 
+        response = sendCommandToServer("SELECT name from customers where ((name LIKE 'a' AND id < 4) OR id == 1);");
+        assertTrue(response.contains("[OK]"), "Opening and closing brackets index error in query");
+        results = response.split("\n");
+
+        entriesResult = new ArrayList<String>();
+        for(int i = 2; i < results.length; i++){
+            entriesResult.add(results[i].trim());
+        }
+
+        assertTrue(entriesResult.size() == 2, "only one entry matches the select condition");
+        assertTrue(entriesResult.get(0).equals("Alice"), "Only two eligible entries that match the condition was supposed to be returned - Alice and Charlie");
+        assertTrue(entriesResult.get(1).equals("Charlie"), "Only two eligible entries that match the condition was supposed to be returned - Alice and Charlie");
+
 
 
 
@@ -770,9 +875,13 @@ public class DBTesting {
         response = sendCommandToServer("UPDATE customers SET phone = 9090 where (((name LIKE 'a' AND id > 3))))) OR id == 1);");
         assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
 
-        //response = sendCommandToServer("UPDATE customers SET phone = 9090 where (name LIKE 'a' AND id > 3 OR id == 1)));");
-        //System.out.println(response);
-        //assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
+        response = sendCommandToServer("UPDATE customers SET phone = 9090 where (name LIKE 'a' AND id > 3 OR id == 1)));");
+        assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
+
+        response = sendCommandToServer("UPDATE customers SET phone = 9090 where (name LIKE 'a' AND id > 3 OR id == 1)));");
+        assertTrue(response.contains("[ERROR]"), "Opening and closing brackets index error in query");
+
+
 
     }
 

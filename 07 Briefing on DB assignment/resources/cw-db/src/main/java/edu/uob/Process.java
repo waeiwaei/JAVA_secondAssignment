@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.jar.Attributes;
 
 public class Process {
@@ -16,7 +17,7 @@ public class Process {
     public Process(DBCmd dbstate, String folderpath){
 
         this.dbcmd = dbstate;
-        this.storageFolderPath = folderpath + fileSeparator;
+        Process.storageFolderPath = folderpath + fileSeparator;
 
     }
 
@@ -186,14 +187,16 @@ public class Process {
         String attributes[] = br.readLine().split("\t");
         ArrayList<String> attributeList = new ArrayList<String>(Arrays.asList(attributes));
 
-        ArrayList<String>entries = new ArrayList<String>();
+//        ArrayList<String>entries = new ArrayList<String>();
+//
+//        //extract all the entries
+//        String x = br.readLine();
+//        while(x != null){
+//            entries.add(x);
+//            x = br.readLine();
+//        }
 
-        //extract all the entries
-        String x = br.readLine();
-        while(x != null){
-            entries.add(x);
-            x = br.readLine();
-        }
+        ArrayList<String> entries = readEntries(br);
 
         ArrayList<Integer> tracker = new ArrayList<Integer>();
 
@@ -283,7 +286,7 @@ public class Process {
 
     private String selectCMD() throws Exception {
 
-        ArrayList<String>  attributeList = new ArrayList<String>();
+        ArrayList<String> attributeList = new ArrayList<String>();
 
         //get the table path
         String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
@@ -297,8 +300,10 @@ public class Process {
         String attributes[] = br.readLine().split("\t");
 
         for(int i = 0; i < attributes.length; i++){
-            attributeList.add(attributes[i]);
+            attributeList.add(attributes[i].toLowerCase());
         }
+
+
 
         String result = "[OK]\n";
 
@@ -363,7 +368,7 @@ public class Process {
             if (dbcmd.colNames.get(0).equals("*")) {
                 result += String.join("\t", attributeList);
                 String nextLine = br.readLine();
-                while (nextLine != null) {
+                while (nextLine != null && !nextLine.isEmpty()) {
                     if (conditionProcessList(dbcmd, nextLine, attributeList))
                         result += "\n" + nextLine;
                     nextLine = br.readLine();
@@ -388,7 +393,7 @@ public class Process {
                 for (i = 0; i < dbcmd.colNames.size(); i++) {
                     int j = 0;
                     for (j = 0; j < attributes.length; j++) {
-                        if (dbcmd.colNames.get(i).equals(attributes[j])) {
+                        if (dbcmd.colNames.get(i).equalsIgnoreCase(attributes[j])) {
                             arr[j] = true;
                             break;
                         }
@@ -421,7 +426,7 @@ public class Process {
                 }
 
                 String nextLine = br.readLine();
-                while(nextLine != null){
+                while(nextLine != null && !nextLine.isEmpty()){
 
                     boolean flag = true;
                     String arr1[] = nextLine.split("\t");
@@ -454,32 +459,18 @@ public class Process {
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
 
         String attribute = br.readLine();
+        ArrayList<String> attributeList = new ArrayList<String>();
+        ArrayList<String> entries = new ArrayList<String>();
 
-        String attlist[]  = attribute.split("\t");
-        ArrayList<String> attributeList = new ArrayList<String>(Arrays.asList(attlist));
+        if(attribute != null){
 
-        //String attribute = br.readLine();
-//        String attlist[]  = attribute.split("\t");
-//
-//        ArrayList<String> attributeList = new ArrayList<String>(Arrays.asList(attlist));
-        //ArrayList<String>entries = new ArrayList<String>();
-        ArrayList<String>entries = readEntries(br);
+            String attlist[] = attribute.split("\t");
+            attributeList = new ArrayList<String>(Arrays.asList(attlist));
 
+            entries = readEntries(br);
 
-        //
-//        while(attribute != null){
-//            attribute = br.readLine();
-//            entries.add(attribute);
-//        }
-
-        //ArrayList<String> entries = readEntries(br);
-//
-//
-//        for(int i = 0; i < attlist.length; i++){
-//            attributeList.add(attlist[i]);
-//        }
-        br.close();
-
+            br.close();
+        }
 
         File f1 = new File(filePath);
         if(!f1.exists()){
@@ -523,7 +514,14 @@ public class Process {
                 }
             }
 
-            attributeList.add(dbcmd.colNames.get(0).toLowerCase());
+            //persumes table is not empty
+            if(attributeList.contains("id")){
+                attributeList.add(dbcmd.colNames.get(0).toLowerCase());
+            }else{
+                //persumes table is empty - when adding column, must add id then new attribute
+                attributeList.add("id");
+                attributeList.add(dbcmd.colNames.get(0).toLowerCase());
+            }
 
             //populate columns
             for(int ind = 0; ind < attributeList.size(); ind++){
@@ -620,6 +618,14 @@ public class Process {
 
         String attributeList [] = br.readLine().split("\t");
         int numberAttributes = attributeList.length - 1;
+
+        String nextline = br.readLine();
+        boolean flagEmpty = false;
+
+        //if(nextline == null){
+            flagEmpty = true;
+        //}
+
         br.close();
 
 
@@ -633,7 +639,9 @@ public class Process {
                 System.out.println("Table not created");
             } else if (f.exists()) {
 
-                bw.newLine();
+                //if(flagEmpty != true){
+                    bw.newLine();
+                //}
 
                 bw.write(idIndex);
                 bw.write("\t");
@@ -656,7 +664,7 @@ public class Process {
             bw.close();
         }
 
-        return "[ERROR] - insertCMD \n";
+        return "[ERROR] - number of values to insert does not match the number of attributes \n";
     }
 
     private int checkIdIndex(String filepath) throws IOException {
@@ -906,12 +914,12 @@ public class Process {
         File folder = new File(folderPath);
 
         if(folder.exists()) {
-            this.database = dbcmd.DBName;
+            Process.database = dbcmd.DBName;
         }else {
             return "[ERROR] - Database does not exist";
         }
 
-        return "[OK]";
+        return "[OK]\n";
     }
 
     private String deleteCMD() throws Exception{
@@ -1020,6 +1028,8 @@ public class Process {
                      return false;
                  }
 
+            }else{
+                throw new Exception("Exception - not passed a valid BoolOperator");
             }
         }else{
             String attName = cnd.attributeName;
@@ -1027,12 +1037,12 @@ public class Process {
             String comparator = cnd.comparator;
 
             int index = find(attName, attributeList);
-
+            //throw exception if attribute name is not found
             if(index == -1){
-                return true;
+                return false;
             }
 
-            switch(comparator){
+            switch(comparator.toUpperCase()){
                 case "==":
                     result = equalCom(index, nextLine, value);
                 break;
@@ -1385,6 +1395,8 @@ public class Process {
     }
 
     public Integer find(String attName, ArrayList<String> attributeList){
+
+
 
         return attributeList.indexOf(attName.toLowerCase());
     }

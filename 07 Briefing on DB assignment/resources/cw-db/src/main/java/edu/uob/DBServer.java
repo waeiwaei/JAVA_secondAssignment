@@ -1,6 +1,11 @@
 package edu.uob;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Paths;
@@ -17,30 +22,10 @@ public class DBServer {
 
     public static void main(String args[]) throws IOException {
 
-        //tokenize commands from user
-        //String command = "UPDATE marks SET mark = 38, age = 7 WHERE name == 'Clive' AND age == 3;";
-        //String command = "UPDATE marks SET mark = 55, pass = FALSE WHERE ((mark == 55 AND name == 'Dave') OR id == 1) OR id == 3);";
-        //String command = "DELETE FROM marks WHERE ((mark == 55 AND name == 'Dave') OR id == 1) OR id == 3);";
-        //String command = "ALTER TABLE customers DROP name;";
-        //String command = "ALTER TABLE marks DROP name;";
-        //String command = "SELECT marks.id, marks.name, marks.mark FROM marks WHERE (((mark == 55 AND name == 'Dave') OR id == 1) OR id == 3);";
-        String command = "SELECT marks.id, marks.name, marks.mark FROM marks WHERE ((id == 3 and mark == 35) OR id == 1) or (name == 'Dave');";
-        //String command = "SELECT * FROM marks where name == 'steve';";
-        //String command = "SELECT * FROM marks WHERE name == 'Dave' AND mark == 55;";
-        //String command = "CREATE TABLE marks (                        hello.name, mark, pass);";
-        //String command = "CREATE TABLE coursework (task, submission);";
-        //String command = "CREATE table testing2;";
-        //String command = "USE testing;";
-        //String command = "DROP TABLE marks;";
-        //String command = "Drop        database testing;";
-        //String command = "JOIN coursework AND marks ON submission AND id;";
-        //String command = "join marks and coursework on id and submission;";
-        //String command = "INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);";
-        //String command = "insert into customers values('name', age, e93);";
-//        String command = "Join orders and customers on customerId and id;";
-////////
-        String valueReturn="";
-
+//        String command = "Select                 name from people where name ==      'Steve';";
+//
+//        String valueReturn = "";
+//
 //        try{
 //            Tokenizer tokenCommands = new Tokenizer(command);
 //            Parser p = new Parser();
@@ -55,6 +40,7 @@ public class DBServer {
 //        }catch(Exception e){
 //            valueReturn="[ERROR]\n";
 //        }
+
 
         DBServer server = new DBServer();
         server.blockingListenOn(8888);
