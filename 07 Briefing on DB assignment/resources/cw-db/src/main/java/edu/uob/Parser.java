@@ -396,7 +396,7 @@ public class Parser {
     //<AttributeList>   ::=  [AttributeName] | [AttributeName] "," <AttributeList>
     private void parseAttributeList(Tokenizer tk) throws Exception {
 
-        dbstate.colNames.add(parseAttributeName(tk).toLowerCase());
+        dbstate.colNames.add(parseAttributeName(tk));
 
         if(tk.nextToken().equals(",")){
             parseAttributeList(tk);
@@ -427,6 +427,10 @@ public class Parser {
                 throw new Exception("Parse failed!");
 
             attributeName+=parsePlainText(tk.nextToken());
+
+            if(dbstate.commandtype.equalsIgnoreCase("join")){
+                tk.previousToken();
+            }
 
         }else{
 
@@ -786,9 +790,13 @@ public class Parser {
 
         subIntegerLiteral = parseDigitSequence(tk.getCurrentToken());
 
-        if (subIntegerLiteral != null) {
+        if (!subIntegerLiteral.isEmpty() && !integerLiteral.isEmpty()) {
+
             integerLiteral += subIntegerLiteral;
             return integerLiteral;
+
+        }else if(!subIntegerLiteral.isEmpty() && integerLiteral.isEmpty()){
+            return subIntegerLiteral;
 
         }else{
             integerLiteral = "";
@@ -815,26 +823,31 @@ public class Parser {
             tk.nextToken();
         }
 
+        //gets the first digit sequence
         String first = parseDigitSequence(tk.getCurrentToken());
 
-        if (first != null) {
-            subfloat_literal = first;
+        if (!first.isEmpty()) {
+            subfloat_literal += first;
 
+            //identify if the next token is a "."
             if (tk.nextToken().equals(".")) {
+
                 subfloat_literal += tk.getCurrentToken();
 
                 String second = parseDigitSequence(tk.nextToken());
-
-                if (second != null) {
+                if (!second.isEmpty()) {
                     subfloat_literal += tk.getCurrentToken();
+                }else{
+                    return "";
                 }
 
             }else{
+
                 tk.setTokenIndex(initialIndex);
                 return "";
             }
         }else{
-            return null;
+            return "";
         }
 
         float_literal += subfloat_literal;
@@ -861,6 +874,7 @@ public class Parser {
     private String parseBooleanLiteral(String token) throws Exception {
 
         if(token.equalsIgnoreCase("TRUE") || token.equalsIgnoreCase("FALSE")){
+            token = token.toLowerCase();
             return token;
         }
 

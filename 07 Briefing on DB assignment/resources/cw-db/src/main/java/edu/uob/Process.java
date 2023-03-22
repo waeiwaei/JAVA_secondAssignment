@@ -4,12 +4,11 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
-import java.util.Locale;
-import java.util.jar.Attributes;
+import java.util.stream.Collectors;
+
 
 public class Process {
 
-    //static String database = "rhngugxcqc";
     static String database;
     static String fileSeparator = File.separator;
     static String storageFolderPath;
@@ -80,10 +79,17 @@ public class Process {
 
     private String createTableCMD() throws Exception {
 
-        String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
+//        String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
+//
+//        for(int i = 0; i < keywords.length; i++){
+//            if(keywords[i].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+//                return "[ERROR] - cannot name table from keyword";
+//            }
+//        }
 
-        for(int i = 0; i < keywords.length; i++){
-            if(keywords[i].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+        for(int i = 0; i < dbcmd.TableNames.size(); i++){
+            boolean keyWordCheck = sqlKeyWordChecker(dbcmd.TableNames.get(i));
+            if(keyWordCheck == true){
                 return "[ERROR] - cannot name table from keyword";
             }
         }
@@ -94,15 +100,14 @@ public class Process {
         String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File f = new File(filePath);
 
-
         if(dbcmd.colNames == null){
 
             if(!f.exists()){
                 boolean create = f.createNewFile();
                 if(create){
-                    System.out.println("Table created");
+                    return "[OK]\n";
                 }else{
-                    System.out.println("Table not created");
+                    throw new Exception("[ERROR] - Table could not be created");
                 }
 
             }else if (f.exists()){
@@ -111,24 +116,41 @@ public class Process {
 
         }else{
 
-            for(int i = 0; i < keywords.length; i++){
-                for(int j = 0; j < dbcmd.colNames.size(); j++) {
-                    if (keywords[i].equalsIgnoreCase(dbcmd.colNames.get(j))) {
-                        return "[ERROR] - cannot have attributes with keyword names";
-                    }
+            //check cannot be a keyword
+//            for(int i = 0; i < keywords.length; i++){
+//                for(int j = 0; j < dbcmd.colNames.size(); j++) {
+//                    if (keywords[i].equalsIgnoreCase(dbcmd.colNames.get(j))) {
+//                        return "[ERROR] - cannot have attributes names as keywords (join, select, delete, update, drop, alter, insert, create)";
+//                    }
+//                }
+//            }
+
+            for(int i = 0; i < dbcmd.colNames.size(); i++){
+                boolean keyWordCheck = sqlKeyWordChecker(dbcmd.colNames.get(i));
+                if(keyWordCheck == true){
+                    return "[ERROR] - cannot name table from keyword";
                 }
+            }
+
+
+            //check cannot have two attributes with the same name
+            boolean hasDuplicate = dbcmd.colNames.stream()
+                    .distinct()
+                    .collect(Collectors.toList())
+                    .size() != dbcmd.colNames.size();
+
+            if(hasDuplicate){
+                throw new Exception("[ERROR] - table cannot have duplicate attributes");
             }
 
             if(!f.exists()){
                 boolean create = f.createNewFile();
-                if(create){
-                    System.out.println("Table created");
-                }else{
-                    System.out.println("Table not created");
+                if(!create){
+                    throw new Exception("[ERROR] - table could not be created\n");
                 }
 
             }else if (f.exists()){
-                return "[ERROR] - Table already exists";
+                return "[ERROR] - Table already exists\n";
             }
 
             FileWriter fl = new FileWriter(f);
@@ -138,7 +160,7 @@ public class Process {
             bw.write("\t");
 
             for(int i = 0; i < dbcmd.colNames.size(); i++){
-                bw.write(dbcmd.colNames.get(i).toLowerCase());
+                bw.write(dbcmd.colNames.get(i));
                 bw.write("\t");
             }
 
@@ -150,13 +172,20 @@ public class Process {
 
     private String createDatabaseCMD() throws Exception {
 
-        String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
+//        String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
+//
+//        for(int i = 0; i < keywords.length; i++){
+//            if (keywords[i].equalsIgnoreCase(dbcmd.DBName)) {
+//                return "[ERROR] - cannot have attributes names as keywords (join, select, delete, update, drop, alter, insert, create)";
+//            }
+//        }
 
-        for(int i = 0; i < keywords.length; i++){
-            if (keywords[i].equalsIgnoreCase(dbcmd.DBName)) {
-                return "[ERROR] - cannot database from keyword";
-            }
+
+        boolean keyWordCheck = sqlKeyWordChecker(dbcmd.DBName);
+        if(keyWordCheck == true){
+            return "[ERROR] - cannot name table from keyword";
         }
+
 
         dbcmd.DBName = dbcmd.DBName.toLowerCase();
 
@@ -177,10 +206,19 @@ public class Process {
         return "[OK]\n";
     }
 
+
+
     private String updateCMD() throws Exception{
+
+        dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
 
         String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0) + ".tab";
         File f = new File(filePath);
+
+        if(!f.exists()){
+            return "[ERROR] - Table does not exist";
+        }
+
         FileInputStream fl = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
 
@@ -188,17 +226,32 @@ public class Process {
         String attributes[] = br.readLine().split("\t");
         ArrayList<String> attributeList = new ArrayList<String>(Arrays.asList(attributes));
 
-//        ArrayList<String>entries = new ArrayList<String>();
-//
-//        //extract all the entries
-//        String x = br.readLine();
-//        while(x != null){
-//            entries.add(x);
-//            x = br.readLine();
-//        }
+
+        //checks if the attributenames are in the format of "."
+        for (int j = 0; j < dbcmd.nameValueList.size(); j++) {
+            if(dbcmd.nameValueList.get(j).Name.contains(".")){
+                String breakupName [] = dbcmd.nameValueList.get(j).Name.split("\\.");
+
+                //check if the table == current table we are going to use
+                if(!breakupName[0].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+                    throw new Exception("Error - not the same table for the table.attribute convention");
+                }
+
+                //if it is the same, then we check if the attribute is found
+                int findIndex = find(breakupName[1], attributeList);
+
+                //then we store the second part back into dbcmd.colNames
+                if(findIndex == -1){
+                    throw new Exception("Error - unable to locate attribute name for table");
+                }else{
+                    dbcmd.nameValueList.get(j).Name = breakupName[1];
+                }
+            }
+
+        }
+
 
         ArrayList<String> entries = readEntries(br);
-
         ArrayList<Integer> tracker = new ArrayList<Integer>();
 
         for(int i = 0; i < entries.size(); i++){
@@ -231,6 +284,9 @@ public class Process {
         ArrayList<String> updateVal = new ArrayList<String>();
 
         for(int i = 0; i < dbcmd.nameValueList.size(); i++){
+            if(dbcmd.nameValueList.get(i).Name.equalsIgnoreCase("id")){
+                throw new Exception("Error - not allowed to update ID attributes");
+            }
             updateName.add(dbcmd.nameValueList.get(i).Name.toLowerCase());
         }
 
@@ -243,7 +299,7 @@ public class Process {
 
         //get the column index to update
         for(int i = 0; i < updateName.size(); i++){
-            indexCol.add(attributeList.indexOf(updateName.get(i)));
+            indexCol.add(find(updateName.get(i), attributeList));
         }
 
         int i = 0;
@@ -257,6 +313,9 @@ public class Process {
             }
             i++;
         }
+
+        br.close();
+
 
         //write back to the file and save
         //buffered writer
@@ -289,26 +348,28 @@ public class Process {
         return "[OK]\n";
     }
 
+
+
+
+
     private String selectCMD() throws Exception {
 
-        ArrayList<String> attributeList = new ArrayList<String>();
+        dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
 
         //get the table path
         String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File f = new File(filePath);
-        if(!f.exists())
-            return "[ERROR]";
+        if(!f.exists()){
+            return "[ERROR] - Table does not exist";
+        }
+
         FileInputStream fl = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
 
         //read line and store each column header in attributeList
         String attributes[] = br.readLine().split("\t");
 
-        for(int i = 0; i < attributes.length; i++){
-            attributeList.add(attributes[i].toLowerCase());
-        }
-
-
+        ArrayList<String> attributeList = new ArrayList<String>(Arrays.asList(attributes));
 
         String result = "[OK]\n";
 
@@ -326,15 +387,28 @@ public class Process {
                 boolean arr[] = new boolean[attributes.length];
                 int i = 0;
 
-                //removes '.' character
-                char targetChar = '.';
+
+                //checks if the attributenames are in the format of "."
                 for (int j = 0; j < dbcmd.colNames.size(); j++) {
-                    String str = dbcmd.colNames.get(j);
-                    int index = str.indexOf(targetChar);
-                    if (index != -1) {
-                        String modifiedStr = str.substring(index + 1);
-                        dbcmd.colNames.set(j, modifiedStr);
+                    if(dbcmd.colNames.get(j).contains(".")){
+                        String breakupName [] = dbcmd.colNames.get(j).split("\\.");
+
+                        //check if the table == current table we are going to use
+                        if(!breakupName[0].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+                            throw new Exception("Error - not the same table for the table.attribute convention");
+                        }
+
+                        //if it is the same, then we check if the attribute is found
+                        int findIndex = find(breakupName[1], attributeList);
+
+                        //then we store the second part back into dbcmd.colNames
+                        if(findIndex == -1){
+                            throw new Exception("Error - unable to locate attribute name for table");
+                        }else{
+                            dbcmd.colNames.set(j, breakupName[1]);
+                        }
                     }
+
                 }
 
                 for(i = 0; i < dbcmd.colNames.size(); i++){
@@ -346,13 +420,20 @@ public class Process {
                         }
                     }
                     if(j == attributes.length){
-                        throw new Exception("Attribute " +dbcmd.colNames.get(i)+" not found");
+                        throw new Exception("Attribute " + dbcmd.colNames.get(i)+" not found");
                     }
                 }
 
-                for(int e = 0; e < dbcmd.colNames.size(); e++) {
-                    result += dbcmd.colNames.get(e);
-                    result+= "\t";
+//                for(int e = 0; e < dbcmd.colNames.size(); e++) {
+//                    result += dbcmd.colNames.get(e);
+//                    result+= "\t";
+//                }
+
+                for (int e = 0; e < dbcmd.colNames.size(); e++) {
+                    //result += dbcmd.colNames.get(e);
+                    int getColIndex = find(dbcmd.colNames.get(e), attributeList);
+                    result += attributeList.get(getColIndex);
+                    result += "\t";
                 }
 
                 String nextLine = br.readLine();
@@ -368,6 +449,7 @@ public class Process {
                     nextLine=br.readLine();
                 }
             }
+
         }else {
 
             if (dbcmd.colNames.get(0).equals("*")) {
@@ -383,15 +465,27 @@ public class Process {
                 int i = 0;
 
 
-                //removes '.' character
-                char targetChar = '.';
+                //checks if the attributenames are in the format of "."
                 for (int j = 0; j < dbcmd.colNames.size(); j++) {
-                    String str = dbcmd.colNames.get(j);
-                    int index = str.indexOf(targetChar);
-                    if (index != -1) {
-                        String modifiedStr = str.substring(index + 1);
-                        dbcmd.colNames.set(j, modifiedStr);
+                    if(dbcmd.colNames.get(j).contains(".")){
+                        String breakupName [] = dbcmd.colNames.get(j).split("\\.");
+
+                        //check if the table == current table we are going to use
+                        if(!breakupName[0].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+                            throw new Exception("Error - not the same table for the table.attribute convention");
+                        }
+
+                        //if it is the same, then we check if the attribute is found
+                        int findIndex = find(breakupName[1], attributeList);
+
+                        //then we store the second part back into dbcmd.colNames
+                        if(findIndex == -1){
+                            throw new Exception("Error - unable to locate attribute name for table");
+                        }else{
+                            dbcmd.colNames.set(j, breakupName[1]);
+                        }
                     }
+
                 }
 
 
@@ -404,15 +498,17 @@ public class Process {
                         }
                     }
                     if (j == attributes.length) {
-                        System.out.println("Entering here!");
                         throw new Exception("Attribute " + dbcmd.colNames.get(i) + " not found");
                     }
                 }
 
                 for (int e = 0; e < dbcmd.colNames.size(); e++) {
-                    result += dbcmd.colNames.get(e);
+                    //result += dbcmd.colNames.get(e);
+                    int getColIndex = find(dbcmd.colNames.get(e), attributeList);
+                    result += attributeList.get(getColIndex);
                     result += "\t";
                 }
+
                 result += "\n";
 
                 int trueCounter = 0;
@@ -452,14 +548,24 @@ public class Process {
             }
         }
 
+        br.close();
+
         return result;
     }
 
+
+
+
+
+
     private String alterCMD() throws Exception {
 
+        dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
         String filePath = storageFolderPath + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
 
         File f = new File(filePath);
+        if(!f.exists()){return "[ERROR] - Table does not exist";}
+
         FileInputStream fl = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fl));
 
@@ -467,10 +573,46 @@ public class Process {
         ArrayList<String> attributeList = new ArrayList<String>();
         ArrayList<String> entries = new ArrayList<String>();
 
+
         if(attribute != null){
 
             String attlist[] = attribute.split("\t");
             attributeList = new ArrayList<String>(Arrays.asList(attlist));
+
+
+            //try inserting here
+            //checks if the attributenames are in the format of "."
+            for (int j = 0; j < dbcmd.colNames.size(); j++) {
+                if(dbcmd.colNames.get(j).contains(".")){
+                    String breakupName [] = dbcmd.colNames.get(j).split("\\.");
+
+                    //check if the table == current table we are going to use
+                    if(!breakupName[0].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+                        throw new Exception("Error - not the same table for the table.attribute convention");
+                    }
+
+                    dbcmd.colNames.set(j, breakupName[1]);
+
+                }
+
+            }
+
+
+
+            //newly added attributes cannot have the same name as existing attributes
+            if(dbcmd.alterationType.equalsIgnoreCase("ADD")) {
+                for (int i = 0; i < attributeList.size(); i++) {
+                    if (dbcmd.colNames.get(0).equalsIgnoreCase(attributeList.get(i))) {
+                        throw new Exception("Error - cannot have 2 attribute fields with the same name");
+                    }
+                }
+            }
+
+            if(dbcmd.alterationType.equalsIgnoreCase("Drop")) {
+                if (dbcmd.colNames.get(0).equalsIgnoreCase("id")) {
+                    throw new Exception("Error - not allowed to remove ID field");
+                }
+            }
 
             entries = readEntries(br);
 
@@ -488,18 +630,19 @@ public class Process {
         FileWriter fl1 = new FileWriter(f1);
         BufferedWriter bw = new BufferedWriter(fl1);
 
+
         //include column at the end - with the id attribute
         if(dbcmd.alterationType.equalsIgnoreCase("Add")){
 
-            String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join" };
+            boolean keyWordCheck = false;
+            for(int i = 0; i < dbcmd.colNames.size(); i++){
+                keyWordCheck = sqlKeyWordChecker(dbcmd.colNames.get(i));
+                break;
+            }
 
-            //for each row, we want to create a new string with the original values and with the + ("\t"+"")
-            //result += String.join("\t", arr1) + "\t" + String.join("\t", arr2) + "\n";
 
-
-            for(int i = 0; i < keywords.length; i++){
-                if(keywords[i].equalsIgnoreCase(dbcmd.colNames.get(0))){
-
+            //if the attribute consists of a keyword - we populate the fields and return back to user
+            if(keyWordCheck == true){
                     //populate columns
                     for(int ind = 0; ind < attributeList.size(); ind++){
                         bw.write(attributeList.get(ind));
@@ -520,16 +663,17 @@ public class Process {
 
                     bw.close();
                     return "[ERROR] - attribute name cannot be a keyword";
-                }
             }
+
+
 
             //persumes table is not empty
             if(attributeList.contains("id")){
-                attributeList.add(dbcmd.colNames.get(0).toLowerCase());
+                attributeList.add(dbcmd.colNames.get(0));
             }else{
                 //persumes table is empty - when adding column, must add id then new attribute
                 attributeList.add("id");
-                attributeList.add(dbcmd.colNames.get(0).toLowerCase());
+                attributeList.add(dbcmd.colNames.get(0));
             }
 
             //populate columns
@@ -544,7 +688,7 @@ public class Process {
                     break;
                 }
                 bw.write("\n");
-                bw.write(String.join("\t", entries.get(i) + " "));
+                bw.write(String.join("\t", entries.get(i) + " " + "\t"));
                 //bw.write("\n");
             }
 
@@ -552,10 +696,12 @@ public class Process {
 
         }else{
 
-        //drop specific column attribute from that row
-        //delimeted by "\t"
             String attributeDrop = dbcmd.colNames.get(0);
-            int attDropIndex = attributeList.indexOf(attributeDrop);
+            int attDropIndex = find(attributeDrop, attributeList);
+
+            if(attDropIndex == -1){
+                throw new Exception("Error - attribute to be dropped doesnt exist");
+            }
 
             String [][] entriesDel = new String[entries.size()][attributeList.size()];
             int row = 0;
@@ -584,7 +730,7 @@ public class Process {
                 }
             }
 
-            attributeList.remove(dbcmd.colNames.get(0));
+            attributeList.remove(attributeList.get(attDropIndex));
 
 
             for(int i = 0; i < attributeList.size(); i++){
@@ -596,7 +742,7 @@ public class Process {
 
             //write new array to file
             for(int i = 0; i < newArray.length; i++){
-                for(int j = 0; j < attributeList.size(); j++){
+                for(int j = 0; j < newArray[0].length; j++){
                     bw.write(newArray[i][j]);
                     bw.write("\t");
                 }
@@ -609,7 +755,14 @@ public class Process {
         return "[OK]\n";
     }
 
+
+
+
+
+
     private String insertCMD() throws Exception {
+
+        dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
 
         String filePath = storageFolderPath + database + fileSeparator + dbcmd.TableNames.get(0) + ".tab";
         String idIndex = String.valueOf(checkIdIndex(filePath));
@@ -625,29 +778,24 @@ public class Process {
         String attributeList [] = br.readLine().split("\t");
 
         ArrayList<String> entries = readEntries(br);
+        //excluding id
         int numberAttributes = attributeList.length - 1;
 
 
         br.close();
 
-        File f = new File(filePath);
-        FileWriter fl = new FileWriter(f);
-        BufferedWriter bw = new BufferedWriter(fl);
-
         if (dbcmd.values.size() != 0 && dbcmd.values.size() == numberAttributes) {
 
+            File f = new File(filePath);
+            FileWriter fl = new FileWriter(f);
+            BufferedWriter bw = new BufferedWriter(fl);
+
             if (!f.exists()) {
-                System.out.println("Table not created");
+
             } else if (f.exists()) {
                   String newInsert = idIndex + "\t";
 
                 for (int i = 0; i < dbcmd.values.size(); i++) {
-
-                    //find if there is a "+" then we remove it
-                    if(dbcmd.values.get(i).contains("+")){
-                        dbcmd.values.set(i, dbcmd.values.get(i).replace("+" ,""));
-                    }
-
                     newInsert += dbcmd.values.get(i) + "\t";
                 }
 
@@ -667,31 +815,25 @@ public class Process {
                     bw.write("\n");
                 }
 
-//                bw.newLine();
-//
-//                bw.write(idIndex);
-//                bw.write("\t");
-//
-//                for (int i = 0; i < dbcmd.values.size(); i++) {
-//
-//                    //find if there is a "+" then we remove it
-//                    if(dbcmd.values.get(i).contains("+")){
-//                        dbcmd.values.set(i, dbcmd.values.get(i).replace("+" ,""));
-//                    }
-//
-//                    bw.write(dbcmd.values.get(i));
-//                    bw.write("\t");
-//                }
-
             }
             bw.close();
             return "[OK]\n";
-        }else{
-            bw.close();
         }
 
+//        else{
+//
+//
+//
+//            bw.close();
+//        }
+
         return "[ERROR] - number of values to insert does not match the number of attributes \n";
+
     }
+
+
+
+
 
     private int checkIdIndex(String filepath) throws IOException {
 
@@ -703,8 +845,6 @@ public class Process {
 
         String x = br.readLine();
 
-        //get the latest index of the ID
-
         while(x != null){
             x = br.readLine();
             if(x == null) {
@@ -714,17 +854,18 @@ public class Process {
         }
 
         result += 1;
-
         br.close();
 
         return result;
     }
 
 
+
+
     private String joinCMD() throws Exception {
 
-        String table1 = dbcmd.join.get(0).table;
-        String table2 = dbcmd.join.get(1).table;
+        String table1 = dbcmd.join.get(0).table.toLowerCase();
+        String table2 = dbcmd.join.get(1).table.toLowerCase();
 
         //buffered reader
         String filePath1 = storageFolderPath+database+fileSeparator+table1+".tab";
@@ -752,8 +893,6 @@ public class Process {
             throw new Exception("Error - unable to find file");
         }
 
-        //br1.readLine() -> Reads the lines of first table file
-        //br2.readLine() -> Reads the lines of second table file
 
         String a1 [] = br1.readLine().split("\t");
         String a2 [] = br2.readLine().split("\t");
@@ -761,42 +900,43 @@ public class Process {
 
         //ArrayList<String> attrL1 -> Stores Attribute List of first Table
         ArrayList<String> attrL1 = new ArrayList<String>(Arrays.asList(a1));
-//
-//        for(int i = 0; i < a1.length; i++){
-//            attrL1.add(a1[i]);
-//        }
 
 
         //ArrayList<String> attrL2 -> Stores Attribute List of second Table
         ArrayList<String> attrL2 = new ArrayList<String>(Arrays.asList(a2));
 
-//        for(int i = 0; i < a2.length; i++){
-//            attrL2.add(a2[i]);
-//        }
+        ArrayList<ArrayList<String>> allJoinAttributes = new ArrayList<ArrayList<String>>();
+        allJoinAttributes.add(attrL1);
+        allJoinAttributes.add(attrL2);
 
-        //ArrayList<String> entry1 -> Stores each entry of first Table
-        //ArrayList<String> entry1 = new ArrayList<String>();
 
-//        String val1 = br1.readLine();
-//
-//        while(val1 != null) {
-//            entry1.add(val1);
-//            val1 = br1.readLine();
-//        }
-//
         ArrayList<String> entry1 = readEntries(br1);
-
-        //ArrayList<String> entry2 -> Stores each entry of second Table
-//        ArrayList<String> entry2 = new ArrayList<String>();
-//
-//        String val2 = br2.readLine();
-//
-//        while(val2 != null) {
-//            entry2.add(val2);
-//            val2 = br2.readLine();
-//        }
-
         ArrayList<String> entry2 = readEntries(br2);
+
+
+        //filter out the possible formatting table.name
+        for (int j = 0; j < dbcmd.join.size(); j++) {
+            if(dbcmd.join.get(j).attributes.contains(".")){
+                String breakupName [] = dbcmd.join.get(j).attributes.split("\\.");
+
+                //check if the table == current table we are going to use
+                if(!breakupName[0].equalsIgnoreCase(dbcmd.join.get(j).table)){
+                    throw new Exception("Error - not the same table for the table.attribute convention");
+                }
+
+                //if it is the same, then we check if the attribute is found
+                int findIndex = find(breakupName[1], allJoinAttributes.get(j));
+
+                //then we store the second part back into dbcmd.colNames
+                if(findIndex == -1){
+                    throw new Exception("Error - unable to locate attribute name for table");
+                }else{
+                    dbcmd.join.get(j).attributes = breakupName[1];
+                }
+
+            }
+
+        }
 
 
         //index of the keys for tables to join
@@ -881,7 +1021,12 @@ public class Process {
         return result;
     }
 
+
+
+
     private String dropTableCMD() {
+
+        dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
 
         String filePath = storageFolderPath+database+fileSeparator+dbcmd.TableNames.get(0)+".tab";
         File fl = new File(filePath);
@@ -894,6 +1039,9 @@ public class Process {
 
         return "[OK]\n";
     }
+
+
+
 
     private String dropDatabaseCMD() {
 
@@ -910,6 +1058,8 @@ public class Process {
 
         return "[OK]\n";
     }
+
+
 
     public boolean deleteSubdirectories(File directory) {
         boolean success = true;
@@ -935,6 +1085,8 @@ public class Process {
         return false;
     }
 
+
+
     private String useCMD() {
         String folderPath = storageFolderPath+dbcmd.DBName;
         File folder = new File(folderPath);
@@ -948,7 +1100,11 @@ public class Process {
         return "[OK]\n";
     }
 
+
+
     private String deleteCMD() throws Exception{
+
+        dbcmd.TableNames.set(0, dbcmd.TableNames.get(0).toLowerCase());
 
         String result = "";
         String table = dbcmd.TableNames.get(0);
@@ -1058,6 +1214,18 @@ public class Process {
                 throw new Exception("Exception - not passed a valid BoolOperator");
             }
         }else{
+
+            //if the condition format is table.attributename
+            if(cnd.attributeName.contains(".")){
+                String breakupAttName [] = cnd.attributeName.split("\\.");
+
+                if(!breakupAttName[0].equalsIgnoreCase(dbcmd.TableNames.get(0))){
+                    throw new Exception("Error - table we are working on does not match");
+                }
+
+                cnd.attributeName = breakupAttName[1];
+            }
+
             String attName = cnd.attributeName;
             String value = cnd.value;
             String comparator = cnd.comparator;
@@ -1107,6 +1275,7 @@ public class Process {
         String x = nextLine.split("\t")[index].trim();
         value = value.trim();
 
+        //parse for integer
         try {
             // Try to convert the string to an integer
             int intParseCol = Integer.parseInt(x);
@@ -1121,6 +1290,8 @@ public class Process {
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
         }
+
+        //parse for float
         try {
             // Try to convert the string to a float
             float floatParseCol = Float.parseFloat(x);
@@ -1136,6 +1307,7 @@ public class Process {
             // Ignore the exception and move on to the next check
         }
 
+        //parse for string
         try {
 
             if(x.equals(value)){
@@ -1148,7 +1320,7 @@ public class Process {
             // Ignore the exception and move on to the next check
         }
 
-
+        //parse for null
         try{
 
             if(x.equalsIgnoreCase(" ") && value == null){
@@ -1159,8 +1331,8 @@ public class Process {
         }catch(NullPointerException e){
 
         }
-        return false;
 
+        return false;
     }
 
 
@@ -1188,7 +1360,7 @@ public class Process {
             float floatParseCol = Float.parseFloat(x);
             float floatParseVal = Float.parseFloat(value);
 
-            if(floatParseCol < floatParseVal){
+            if(floatParseVal < floatParseCol){
                 return true;
             }
 
@@ -1210,15 +1382,11 @@ public class Process {
         String x = nextLine.split("\t")[index].trim();
         value  = value.trim();
 
-        System.out.println("Next line : " + x);
 
         try {
             // Try to convert the string to an integer
             int intParseCol = Integer.parseInt(x);
             int intParseVal = Integer.parseInt(value);
-
-            System.out.println("Next line intParseCol: " + intParseCol);
-            System.out.println("Next line intParseVal: " + intParseVal);
 
             if(intParseVal > intParseCol){
                 return true;
@@ -1234,10 +1402,7 @@ public class Process {
             float floatParseCol = Float.parseFloat(x);
             float floatParseVal = Float.parseFloat(value);
 
-            System.out.println("Next line floatParseCol: " + floatParseCol);
-            System.out.println("Next line floatParseVal: " + floatParseVal);
-
-            if(floatParseCol > floatParseVal){
+            if(floatParseVal > floatParseCol){
                 return true;
             }
 
@@ -1314,7 +1479,7 @@ public class Process {
             float floatParseCol = Float.parseFloat(x);
             float floatParseVal = Float.parseFloat(value);
 
-            if(floatParseVal <= floatParseCol){
+            if(floatParseVal >= floatParseCol){
                 return true;
             }
 
@@ -1333,7 +1498,7 @@ public class Process {
     private boolean notEqualCom(int index, String nextLine, String value) throws Exception {
 
         String x = nextLine.split("\t")[index].trim();
-        value  = value.trim();
+        value = value.trim();
 
         try {
             // Try to convert the string to an integer
@@ -1374,6 +1539,18 @@ public class Process {
 
         } catch (NumberFormatException e) {
             // Ignore the exception and move on to the next check
+        }
+
+        //parse for null
+        try{
+
+            if(!x.equalsIgnoreCase(" ") && value == null){
+                return true;
+            }
+
+            return false;
+        }catch(NullPointerException e){
+
         }
 
         return false;
@@ -1419,8 +1596,6 @@ public class Process {
             if(x.contains(value)){
                 return true;
             }
-
-
             return false;
 
         } catch (NumberFormatException e) {
@@ -1430,11 +1605,13 @@ public class Process {
         return false;
     }
 
-    public Integer find(String attName, ArrayList<String> attributeList){
-
-
-
-        return attributeList.indexOf(attName.toLowerCase());
+    public int find(String attName, ArrayList<String> attributeList){
+        for(int i = 0; i < attributeList.size(); i++){
+            if(attributeList.get(i).equalsIgnoreCase(attName)){
+                return i;
+            }
+        }
+        return -1;
     }
 
     public ArrayList<String> readEntries (BufferedReader br) throws IOException {
@@ -1450,10 +1627,17 @@ public class Process {
         return attributelist;
     }
 
-    public boolean checkKeywords(String input){
+    public boolean sqlKeyWordChecker(String input){
 
+        String keywords [] = new String[] {"insert", "create", "delete", "update", "alter", "select", "insert", "use", "join", "and", "on","like","true", "false", "add", "drop"};
 
-        return true;
+        for(int i = 0; i < keywords.length; i++){
+            if(keywords[i].equalsIgnoreCase(input)){
+                return true;
+            }
+        }
+
+        return false;
     }
 
 

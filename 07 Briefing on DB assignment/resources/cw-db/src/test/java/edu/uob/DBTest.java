@@ -74,8 +74,19 @@ public class DBTest {
         response = sendCommandToServer("DELETE attribute1 FROM marks where name == steve;");
         assertTrue(response.contains("[ERROR]"), "Grammar error - value (steve) should be a string literal ('steve')");
 
+        response = sendCommandToServer("select * from Table1 a;");
+        assertTrue(response.contains("[ERROR]"), "Grammar error - parenthesis matching error");
+
+        response = sendCommandToServer("DELETE attribute1 FROM marks where (name == 'steve'));");
+        assertTrue(response.contains("[ERROR]"), "Grammar error - parenthesis matching error");
+
+        response = sendCommandToServer("DELETE attribute1 FROM marks where (((name == 'steve');");
+        assertTrue(response.contains("[ERROR]"), "Grammar error - parenthesis matching error");
+
         response = sendCommandToServer("");
         assertTrue(response.contains("[ERROR]"), "Grammar error - cannot process empty query");
+
+
 
     }
 
@@ -122,7 +133,14 @@ public class DBTest {
         response = sendCommandToServer("ALTER TABLE testingtable ADD " + attributeName + ";");
         assertTrue(response.contains("[ERROR]"), "Interpreter error - unable to add attribute name as keyword");
 
-        sendCommandToServer("drop database "+databaseName+";");
+
+        //insert to little values - many values
+        response = sendCommandToServer("insert into testingtable ('bob')");
+        assertTrue(response.contains("[ERROR]"), "Interpreter error - unable to add attribute name as keyword");
+
+        response = sendCommandToServer("insert into testingtable ('bob',76, 'bob@email.com')");
+        assertTrue(response.contains("[ERROR]"), "Interpreter error - unable to add attribute name as keyword");
+
 
     }
 
@@ -149,7 +167,8 @@ public class DBTest {
         File f = new File(storageFolderPath+fileSeparator+databaseName+fileSeparator+tableName);
         assertTrue(!f.exists(), "Table was not dropped in the " + databaseName +" database directory properly");
 
-        //drop database that exists
+        //drop database that exists - with table
+        sendCommandToServer("create table "+ tableName +";");
         response = sendCommandToServer("drop database " + databaseName +";");
         assertTrue(response.contains("[OK]"), "database not deleted successfully");
 
@@ -214,6 +233,10 @@ public class DBTest {
 
         response = sendCommandToServer("create table create (customerId , product, quantity, price);");
         assertTrue(response.contains("[ERROR]"), "table created however - not allowed to create database with keyword");
+
+        sendCommandToServer("use "+ databaseName + ";");
+        response = sendCommandToServer("create table tableExample (attribute1 , attribute2, attribute3, attribute1);");
+        assertTrue(response.contains("[ERROR]"), "table cannot have 2 attributes with the same name");
 
     }
 
@@ -323,6 +346,7 @@ public class DBTest {
         assertTrue(entries.get(3).contains("Pineapple"), "Insert query was supposed to add the following entries to the table orders");
         assertTrue(entries.get(4).contains("Mango"), "Insert query was supposed to add the following entries to the table orders");
 
+        //insert null value and see if it registers
 
 
         //if they enter more values than attributes, return an error?
@@ -373,7 +397,8 @@ public class DBTest {
         sendCommandToServer("INSERT INTO customers VALUES ('Alice', 'alice@example.com', 073849392);");
         sendCommandToServer("INSERT INTO customers VALUES ('Bob', 'bob@example.com', 389489322);");
         sendCommandToServer("INSERT INTO customers VALUES ('Charlie', 'charlie@example.com', 23232121);");
-        sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 222212233);");
+        sendCommandToServer("INSERT INTO customers VALUES ('dave', 'dave@example.com', 323232300);");
+        sendCommandToServer("INSERT INTO customers VALUES ('Tony', 'tony@example.com', 229392333);");
 
 
 
@@ -391,7 +416,15 @@ public class DBTest {
 
         String singleLineResponse [] = response.split("\n");
 
+        String result [] = response.split("\n");
+        ArrayList<String> entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
         //check for the first line is equals
+        assertTrue(entries.size() == 5, "4 entries were expected to be returned as a result of the JOIN");
         assertTrue(singleLineResponse[1].equals("id\torders.product\torders.quantity\torders.price\tcustomers.name\tcustomers.email\tcustomers.phone\t"), "First row should have the column headers with table.attribute");
         assertTrue(singleLineResponse[2].equals("1\tApple\t2\t3\tAlice\talice@example.com\t073849392\t"), "Second row should have the joined row entries of both tables");
 
@@ -405,6 +438,43 @@ public class DBTest {
         //table should not contain corresponding "Charlie" row - (3	3	Orange	9	7.00)
         response = sendCommandToServer("Join " + ordersTable + " and " + customersTable +" on customerId and id;");
         assertTrue(!response.contains("Orange"), "Should not have a join as there is no customer id=3 entry in customers table");
+        assertTrue(!response.contains("Charlie"), "Should not have a join as there is no customer id=3 entry in customers table");
+
+
+        response = sendCommandToServer("create table marks (Name, mark, pass);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Steve', 65, TRUE);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Dave', 55, TRUE);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Bob', 35, FALSE);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Clive', 20, FALSE);");
+
+
+        response = sendCommandToServer("create table coursework (task, submission);");
+        sendCommandToServer("INSERT INTO coursework VALUES ('OXO', 3);");
+        sendCommandToServer("INSERT INTO coursework VALUES ('DB', 1);");
+        sendCommandToServer("INSERT INTO coursework VALUES ('OXO', 4);");
+        sendCommandToServer("INSERT INTO coursework VALUES ('STAG', 2);");
+
+        response = sendCommandToServer("JOIN coursework AND marks ON submission AND id;");
+        result = response.split("\n");
+        entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
+        assertTrue(entries.size() == 4, "4 entries were expected to be returned as a result of the JOIN");
+
+        //delete row
+        sendCommandToServer("DELETE FROM marks where name == 'Dave';");
+        response = sendCommandToServer("Select * from marks;");
+        assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
+        assertTrue(!response.contains("Dave"), "customers table should not contain attribute Charlie after Delete query");
+
+
+        //table should not contain corresponding "Charlie" row - (3	3	Orange	9	7.00)
+        response = sendCommandToServer("JOIN coursework AND marks ON submission AND id;");
+        assertTrue(!response.contains("STAG"), "Should not have a join as there is no customer id=3 entry in customers table");
+        assertTrue(!response.contains("Dave"), "Should not have a join as there is no customer id=3 entry in customers table");
 
 
     }
@@ -532,7 +602,7 @@ public class DBTest {
 
         assertTrue(entries.size() == 0, "No entries were expected to be returned, as there are no entries which match the condition");
 
-
+        //test select with null condition
         //test with nested where conditions - fail
     }
 
@@ -579,6 +649,17 @@ public class DBTest {
         response = sendCommandToServer("Select * from " +customersTable+";");
         assertTrue(response.contains("attribute1"), "alter - add should have added new column to the table");
 
+        response = sendCommandToServer("alter table "+customersTable+" add attribute1;");
+        assertTrue(response.contains("[ERROR]"), "Should return an error, not allowed to have 2 of the attributes with the same name");
+
+        //alter table add - attname and delete attname (CAPS)
+        response = sendCommandToServer("alter table "+customersTable+" add ATTRIBUTE2;");
+        assertTrue(response.contains("[OK]"), "Should return an error, not allowed to have 2 of the attributes with the same name");
+        response = sendCommandToServer("select attribute2 from " + customersTable + ";");
+        assertTrue(response.contains("[OK]"), "Should return an error, not allowed to have 2 of the attributes with the same name");
+        assertTrue(response.contains("ATTRIBUTE2"), "Should return an error, not allowed to have 2 of the attributes with the same name");
+
+
 
         //test drop
         response = sendCommandToServer("alter table "+customersTable+" drop attribute1;");
@@ -587,12 +668,24 @@ public class DBTest {
         response = sendCommandToServer("Select * from " +customersTable+";");
         assertTrue(!response.contains("attribute1"), "alter - add should have added new column to the table");
 
+        response = sendCommandToServer("alter table "+customersTable+" drop attribute2;");
+        assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
+
+        response = sendCommandToServer("Select * from " +customersTable+";");
+        assertTrue(!response.contains("ATTRIBUTE2"), "alter - add should have added new column to the table");
+
+
         //test drop
         response = sendCommandToServer("alter table "+customersTable+" drop name;");
         assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
 
+        //test drop fail - not allowed to remove id column
+        response = sendCommandToServer("alter table "+customersTable+" drop id;");
+        assertTrue(response.contains("[ERROR]"), "Not allowed to remove id columns");
+
         response = sendCommandToServer("Select * from " +customersTable+";");
         assertTrue(!response.contains("name"), "alter - add should have added new column to the table");
+        assertTrue(response.contains("id"), "alter - add should have added new column to the table");
 
         //test add - attribute name as keyword (error)
         response = sendCommandToServer("alter table "+customersTable+" add join;");
@@ -650,7 +743,7 @@ public class DBTest {
         response = sendCommandToServer("UPDATE customers Set NAME = 'Bruce' where id == 1;");
         assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
 
-        response = sendCommandToServer("SELECT NAME from customers where id == 1;");
+        response = sendCommandToServer("SELECT NAME from customers where ID == 1;");
         assertTrue(response.contains("[OK]"), "Valid query provided, however [OK] was not returned");
 
         results = response.split("\n");
@@ -662,6 +755,17 @@ public class DBTest {
 
         assertTrue(entriesResult.get(0).equals("Bruce"), "Should obtain only one entry result - Alice");
 
+
+
+        //test fail - update ID attribute
+        response = sendCommandToServer("UPDATE customers Set ID = 45 where name == 'Bruce';");
+        assertTrue(response.contains("[ERROR]"), "Valid query provided, users not allowed to change ID value");
+
+        response = sendCommandToServer("UPDATE customers SET phone = 39292, ID = 45 where name == 'Bruce';");
+        assertTrue(response.contains("[ERROR]"), "Valid query provided, users not allowed to change ID value");
+
+        response = sendCommandToServer("UPDATE customers SET phone = 39292, ID = 45, email = 'new@email.com' where name == 'Bruce';");
+        assertTrue(response.contains("[ERROR]"), "Valid query provided, users not allowed to change ID value");
 
 
         //update 2 fields
@@ -944,5 +1048,195 @@ public class DBTest {
 
     }
 
+    @Test
+    public void TestNull(){
+        sendCommandToServer("create database test;");
+        sendCommandToServer("use test;");
+        sendCommandToServer("create table testTable;");
+        String response = sendCommandToServer("Alter table testTable add name;");
+        sendCommandToServer("insert into testTable values ('Bob');");
+        sendCommandToServer("insert into testTable values ('Charles');");
+        response = sendCommandToServer("select * from testTable;");
+
+        assertTrue(response.contains("Charles"), "Table should have 2 entries - Bob & Charles");
+        assertTrue(response.contains("Bob"), "Table should have 2 entries - Bob & Charles");
+
+        response = sendCommandToServer("aLtEr TaBlE testTable add age;");
+        sendCommandToServer("insert into testTable values ('Jerry', 25);");
+        response = sendCommandToServer("select * from testTable;");
+        String result [] = response.split("\n");
+        ArrayList<String> entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
+        assertTrue(entries.size() == 3, "Table should have 3 entries - Bob, Charles & Jerry");
+
+        response = sendCommandToServer("Select id from testTable where age == null;");
+
+        result = response.split("\n");
+        entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+        assertTrue(entries.size() == 2, "Table should have 2 entries - Bob, Charles");
+        assertTrue(response.contains("1"), "Table should have 2 entries - Bob, Charles");
+        assertTrue(response.contains("2"), "Table should have 2 entries - Bob, Charles");
+        assertTrue(!response.contains("3"), "Table should have 2 entries - Bob, Charles");
+
+
+
+        response = sendCommandToServer("Select id from testTable where age != null;");
+        result = response.split("\n");
+        entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+        assertTrue(entries.size() == 1, "Table should have 2 entries - Bob, Charles");
+        assertTrue(response.contains("3"), "Table should have 2 entries - Bob, Charles");
+
+
+
+        response = sendCommandToServer("Update testTable SET name = null WHERE name LIKE 'ry';");
+        response = sendCommandToServer("Select id from testTable where name != null;");
+
+        result = response.split("\n");
+        entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+        assertTrue(entries.size() == 2, "Table should have 2 entries - Bob, Charles");
+        assertTrue(response.contains("1"), "Table should have 2 entries - Bob, Charles");
+        assertTrue(response.contains("2"), "Table should have 2 entries - Bob, Charles");
+        assertTrue(!response.contains("3"), "Table should have 2 entries - Bob, Charles");
+
+        //check for positive and negative numbers
+        //check for true/false values
+    }
+
+    @Test
+    public void TestAttributeName(){
+        String database = generateRandomName();
+
+        //select - update - alter
+        sendCommandToServer("create database "+ database + ";");
+        sendCommandToServer("use "+database+ ";");
+
+        String response = sendCommandToServer("create table marks (Name, mark, pass);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Steve', 65, TRUE);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Dave', 55, TRUE);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Bob', 35, FALSE);");
+        sendCommandToServer("INSERT INTO marks VALUES ('Clive', 20, FALSE);");
+
+
+        response = sendCommandToServer("create table coursework (task, submission);");
+        response = sendCommandToServer("INSERT INTO coursework VALUES ('OXO', 3);");
+        sendCommandToServer("INSERT INTO coursework VALUES ('DB', 1);");
+        sendCommandToServer("INSERT INTO coursework VALUES ('OXO', 4);");
+        sendCommandToServer("INSERT INTO coursework VALUES ('STAG', 2);");
+
+        //Select - w/o conditions
+        response = sendCommandToServer("Select coursework.task from coursework;");
+
+        String queryResult [] = response.split("\n");
+
+        ArrayList<String> entries = new ArrayList<String>();
+        for(int i = 2; i < queryResult.length; i++){
+            entries.add(queryResult[i]);
+        }
+
+        assertTrue(response.contains("[OK]"), "");
+        assertTrue(!queryResult[1].contains("coursework.task"), "");
+        assertTrue(queryResult[1].contains("task"), "");
+
+        assertTrue(entries.size() == 4, "");
+        assertTrue(entries.get(0).contains("OXO"),  "");
+        assertTrue(entries.get(1).contains("DB"), "");
+        assertTrue(entries.get(2).contains("OXO"), "");
+        assertTrue(entries.get(3).contains("STAG"), "");
+
+        //Select - w conditions
+        response = sendCommandToServer("Select coursework.task from coursework where coursework.id == 1;");
+        queryResult = response.split("\n");
+
+        entries = new ArrayList<String>();
+        for(int i = 2; i < queryResult.length; i++){
+            entries.add(queryResult[i]);
+        }
+
+        assertTrue(response.contains("[OK]"), "");
+        assertTrue(entries.size() == 1, "");
+        assertTrue(entries.get(0).contains("OXO"),  "");
+
+        //error
+        response = sendCommandToServer("Select marks.task from coursework where coursework.id == 1;");
+        assertTrue(response.contains("[ERROR]"), "");
+
+        response = sendCommandToServer("Select task from coursework where marks.id == 1;");
+        assertTrue(response.contains("[ERROR]"), "");
+
+
+        //Alter - add
+        response = sendCommandToServer("Alter table coursework add coursework.subject;");
+        assertTrue(response.contains("[OK]"), "");
+
+        response = sendCommandToServer("select subject from coursework;");
+        assertTrue(response.contains("[OK]"), "");
+        assertTrue(!response.contains("coursework.subject"), "");
+        assertTrue(response.contains("subject"), "");
+
+        //Alter - add [ERROR]
+        response = sendCommandToServer("Alter table coursework add marks.subject;");
+        assertTrue(response.contains("[ERROR]"), "");
+
+        //Alter - drop
+        response = sendCommandToServer("Alter table coursework drop coursework.subject;");
+        assertTrue(response.contains("[OK]"), "");
+
+        response = sendCommandToServer("select subject from coursework;");
+        assertTrue(response.contains("[ERROR]"), "");
+
+        //Update
+        response = sendCommandToServer("Update coursework set coursework.task = 'newAssignment' where coursework.id == 1;");
+        assertTrue(response.contains("[OK]"), "");
+        response = sendCommandToServer("SEleCt task from coursework where coursework.id == 1;");
+        assertTrue(response.contains("[OK]"), "");
+        assertTrue(response.contains("newAssignment"), "");
+
+        //Update - [ERROR]
+        response = sendCommandToServer("Update coursework set marks.task = 'newAssignment' where coursework.id == 1;");
+        assertTrue(response.contains("[ERROR]"), "");
+
+        response = sendCommandToServer("Update coursework set coursework.task = 'newAssignment' where marks.id == 1;");
+        assertTrue(response.contains("[ERROR]"), "");
+
+        //reset for JOIN
+        response = sendCommandToServer("Update table coursework set marks.task = 'OXO' where coursework.id == 1;");
+
+
+        //JOIN
+        response = sendCommandToServer("JOIN coursework AND marks ON coursework.submission AND marks.id;");
+        assertTrue(response.contains("[OK]"), "");
+
+        String result [] = response.split("\n");
+        entries = new ArrayList<String>();
+
+        for(int i = 2; i < result.length; i++){
+            entries.add(result[i]);
+        }
+
+
+        assertTrue(entries.size() == 4, "4 entries were expected to be returned as a result of the JOIN");
+
+        //JOIN - [ERROR]
+        response = sendCommandToServer("JOIN coursework AND marks ON tablerandom1.submission AND marks.id);");
+        assertTrue(response.contains("[ERROR]"), "");
+
+
+    }
 
 }

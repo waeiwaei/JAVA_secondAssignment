@@ -22,26 +22,6 @@ public class DBServer {
 
     public static void main(String args[]) throws IOException {
 
-//        String command = "alter table customers drop attribute1;";
-//
-//        String valueReturn = "";
-//
-//        try{
-//            Tokenizer tokenCommands = new Tokenizer(command);
-//            Parser p = new Parser();
-//            DBCmd value = p.parse(tokenCommands);
-//            System.out.println("went through parser");
-//
-//
-//            pr = new Process(value, "/home/waei/OOP_Java/secondAssignment/07 Briefing on DB assignment/resources/cw-db/databases");
-//            valueReturn = pr.query();
-//            System.out.println(valueReturn);
-//
-//        }catch(Exception e){
-//            valueReturn="[ERROR]\n";
-//        }
-
-
         DBServer server = new DBServer();
         server.blockingListenOn(8888);
 
@@ -70,8 +50,7 @@ public class DBServer {
     public String handleCommand(String command) {
         // TODO implement your server logic here
 
-
-        String valueReturn="";
+        String valueReturn = "";
 
         try{
             Tokenizer tokenCommands = new Tokenizer(command);
